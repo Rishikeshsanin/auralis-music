@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08090d" />
+  <meta name="description" content="Auralis — an elegant open music experience powered by programmable music catalogs." />
+  <title>Auralis — Listen differently</title>
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="#" aria-label="Auralis home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Auralis</span>
+      </a>
+
+      <nav class="nav-group" id="desktopNav">
+        <button class="nav-item active" data-view="home"><span>⌂</span> Home</button>
+        <button class="nav-item" data-view="discover"><span>✦</span> Discover</button>
+        <button class="nav-item" data-view="liked"><span>♡</span> Liked songs</button>
+        <button class="nav-item" data-view="recent"><span>↺</span> Recently played</button>
+      </nav>
+
+      <div class="sidebar-section">
+        <p class="eyebrow">YOUR SPACE</p>
+        <button class="mini-action" id="newPlaylistButton"><span>＋</span> New playlist</button>
+        <button class="mini-action" id="queueButton"><span>≡</span> Queue <b id="queueCount">0</b></button>
+      </div>
+
+      <div class="sidebar-card">
+        <div class="live-dot"></div>
+        <p>Open catalog</p>
+        <strong>Powered by Audius</strong>
+        <small>Streaming availability follows each creator's catalog permissions.</small>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input id="searchInput" type="search" autocomplete="off" placeholder="Search tracks, artists, moods..." aria-label="Search music" />
+          <kbd>/</kbd>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="refreshButton" aria-label="Refresh music" title="Refresh">↻</button>
+          <button class="profile-pill" aria-label="Profile">
+            <span class="profile-avatar">R</span>
+            <span>Listener</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="content-scroll" id="contentScroll">
+        <section id="homeView" class="view active-view">
+          <div class="hero">
+            <div class="hero-copy">
+              <p class="eyebrow">OPEN MUSIC · BEAUTIFUL PLAYER</p>
+              <h1>Music for the moment<br/><em>you’re actually in.</em></h1>
+              <p class="hero-sub">Search an open catalog, build your queue, keep your favorites, and let the interface disappear into the music.</p>
+              <div class="hero-actions">
+                <button class="primary-button" id="heroPlayButton"><span>▶</span> Play something good</button>
+                <button class="ghost-button" data-view-trigger="discover">Explore moods</button>
+              </div>
+            </div>
+            <div class="hero-orbit" aria-hidden="true">
+              <div class="record">
+                <div class="record-ring ring-1"></div>
+                <div class="record-ring ring-2"></div>
+                <div class="record-ring ring-3"></div>
+                <div class="record-label"><span>A</span></div>
+              </div>
+              <div class="floating-chip chip-a">Late night</div>
+              <div class="floating-chip chip-b">Focus</div>
+              <div class="floating-chip chip-c">Fresh finds</div>
+            </div>
+          </div>
+
+          <section class="section-block">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">CURATED FOR NOW</p>
+                <h2>Trending on the open catalog</h2>
+              </div>
+              <button class="text-button" id="seeAllTrending">See all →</button>
+            </div>
+            <div class="card-grid" id="trendingGrid" aria-live="polite"></div>
+          </section>
+
+          <section class="section-block mood-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">SET THE VIBE</p>
+                <h2>Pick a mood, skip the scrolling</h2>
+              </div>
+            </div>
+            <div class="mood-grid" id="moodGrid">
+              <button data-mood="chill"><span>☁</span><strong>Chill</strong><small>Soft edges</small></button>
+              <button data-mood="electronic"><span>ϟ</span><strong>Energy</strong><small>Move faster</small></button>
+              <button data-mood="ambient"><span>◌</span><strong>Focus</strong><small>Quiet momentum</small></button>
+              <button data-mood="hip-hop"><span>◈</span><strong>Night drive</strong><small>City lights</small></button>
+              <button data-mood="pop"><span>✺</span><strong>Feel good</strong><small>Easy replay</small></button>
+              <button data-mood="experimental"><span>◇</span><strong>Left field</strong><small>Find something new</small></button>
+            </div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">KEEP LISTENING</p>
+                <h2>Recently played</h2>
+              </div>
+            </div>
+            <div class="track-list" id="recentPreview"></div>
+          </section>
+        </section>
+
+        <section id="discoverView" class="view">
+          <div class="page-heading">
+            <p class="eyebrow">DISCOVER</p>
+            <h1>Find your next repeat.</h1>
+            <p>Use a mood below or search anything above. Results come from the active open music provider.</p>
+          </div>
+          <div class="genre-pills" id="genrePills">
+            <button data-query="electronic">Electronic</button><button data-query="hip hop">Hip-Hop</button><button data-query="rock">Rock</button><button data-query="ambient">Ambient</button><button data-query="house">House</button><button data-query="lofi">Lo-fi</button><button data-query="indie">Indie</button><button data-query="remix">Remixes</button>
+          </div>
+          <div class="section-heading compact-heading"><h2 id="discoverTitle">Fresh discoveries</h2><span id="resultMeta"></span></div>
+          <div class="track-list full-list" id="discoverList"></div>
+        </section>
+
+        <section id="likedView" class="view">
+          <div class="page-heading library-heading"><div class="library-icon">♡</div><div><p class="eyebrow">YOUR LIBRARY</p><h1>Liked songs</h1><p id="likedCountText">Your saved tracks live here.</p></div></div>
+          <div class="track-list full-list" id="likedList"></div>
+        </section>
+
+        <section id="recentView" class="view">
+          <div class="page-heading"><p class="eyebrow">HISTORY</p><h1>Recently played</h1><p>A local listening trail stored on this device.</p></div>
+          <div class="track-list full-list" id="recentList"></div>
+        </section>
+
+        <section id="searchView" class="view">
+          <div class="page-heading"><p class="eyebrow">SEARCH RESULTS</p><h1 id="searchTitle">Search Auralis</h1><p id="searchSubtitle">Start typing to search the open catalog.</p></div>
+          <div class="track-list full-list" id="searchList"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <aside class="queue-drawer" id="queueDrawer" aria-hidden="true">
+    <div class="drawer-header"><div><p class="eyebrow">UP NEXT</p><h2>Queue</h2></div><button class="icon-button" id="closeQueue" aria-label="Close queue">×</button></div>
+    <div class="queue-list" id="queueList"></div>
+    <button class="ghost-button full-button" id="clearQueue">Clear queue</button>
+  </aside>
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+  <div class="player" id="playerBar">
+    <div class="player-track">
+      <div class="player-cover placeholder-cover" id="playerCover"><span>A</span></div>
+      <div class="player-meta"><strong id="playerTitle">Choose a track</strong><span id="playerArtist">Auralis</span></div>
+      <button class="like-button" id="playerLike" aria-label="Like current track">♡</button>
+    </div>
+    <div class="player-center">
+      <div class="player-controls">
+        <button id="shuffleButton" aria-label="Shuffle" title="Shuffle">⌘</button>
+        <button id="prevButton" aria-label="Previous" title="Previous">◀</button>
+        <button class="play-main" id="playButton" aria-label="Play" title="Play">▶</button>
+        <button id="nextButton" aria-label="Next" title="Next">▶</button>
+        <button id="repeatButton" aria-label="Repeat" title="Repeat">↻</button>
+      </div>
+      <div class="progress-row"><span id="currentTime">0:00</span><input id="progressBar" type="range" min="0" max="100" value="0" step="0.1" aria-label="Track progress"/><span id="durationTime">0:00</span></div>
+    </div>
+    <div class="player-extras">
+      <button id="mobileQueueButton" aria-label="Open queue" title="Queue">≡</button>
+      <span class="volume-icon">◖</span>
+      <input id="volumeBar" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
+    </div>
+    <audio id="audio" preload="metadata" crossorigin="anonymous"></audio>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <button class="active" data-view="home"><span>⌂</span><small>Home</small></button>
+    <button data-view="discover"><span>✦</span><small>Discover</small></button>
+    <button data-view="liked"><span>♡</span><small>Liked</small></button>
+    <button data-view="recent"><span>↺</span><small>Recent</small></button>
+  </nav>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
