@@ -1,36 +1,86 @@
 # Auralis 🎧
 
-Auralis is a polished, responsive web music player built around open, programmable music catalogs. The first provider adapter uses the Audius REST API for real track discovery and streaming, while the UI remains provider-agnostic so additional legal music sources can be added without rebuilding the player.
+> A polished, responsive open-catalog music experience with real discovery, playback, queueing, likes, history, mood browsing, and a premium Spotify-inspired interface.
+
+[![Smoke Test](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml/badge.svg)](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml)
+[![Live on Vercel](https://img.shields.io/badge/Live-Vercel-000000?logo=vercel)](https://auralis-music-lime.vercel.app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**Live demo:** https://auralis-music-lime.vercel.app
+
+## Why Auralis
+
+Auralis is not a static Spotify mockup. The interface is backed by a provider layer that can search and stream real tracks from programmable music catalogs. The first adapter uses Audius, while the rest of the player stays provider-agnostic so additional legal catalogs can be added later without rebuilding the UI or playback system.
 
 ## Highlights
 
 - Real music search and trending discovery through Audius
-- Persistent bottom player with play/pause, seek, next/previous, shuffle and repeat
+- Full audio player with play/pause, seek, next/previous, volume, shuffle and repeat
 - Queue drawer with removal and clear actions
-- Liked songs and listening history saved locally
+- Liked songs and recently played history persisted locally
 - Mood and genre discovery flows
-- Media Session API support for OS/browser media controls
+- Media Session API support for browser/OS media controls
 - Responsive desktop, tablet and mobile layouts
-- PWA shell with offline UI caching
-- Graceful demo fallback with original generated audio if the external catalog is unreachable
-- Zero frontend framework dependency for the MVP: fast load, tiny surface area, simple deployment
+- Mobile bottom navigation and compact player controls
+- PWA manifest and offline application-shell caching
+- Graceful offline/provider fallback with original synthesized demo audio
+- Provider abstraction under `js/providers/`
+- Vercel security headers and clean URLs
+- GitHub Actions smoke testing on pushes and pull requests
+- Zero framework dependency in v1 for a small, transparent frontend surface
 
 ## Architecture
 
 ```text
-Browser UI
-   ├── Player + Queue
-   ├── Local library store
-   ├── Provider interface
-   │      └── Audius REST API
-   └── PWA service worker
+                         AURALIS
+                            │
+                    Provider Interface
+                            │
+                 ┌──────────┴──────────┐
+                 │                     │
+              Audius              Future providers
+                 │                     │
+                 └──────────┬──────────┘
+                            │
+                    Normalized tracks
+                            │
+              ┌─────────────┼─────────────┐
+              │             │             │
+           Player         Queue       Discovery
+              │
+       Local library store
+        ├── Liked songs
+        ├── History
+        └── Volume
 ```
 
-The provider boundary lives in `js/providers/`. A future SoundCloud, Jamendo, self-hosted artist catalog, or licensed catalog can normalize results to the same track shape and reuse the existing interface/player.
+## Project structure
+
+```text
+auralis-music/
+├── assets/
+│   ├── covers/              # Original demo artwork
+│   └── icon.svg
+├── js/
+│   ├── providers/
+│   │   └── audius.js        # Music-provider adapter
+│   ├── app.js               # Player, search, queue and UI controller
+│   ├── fallback.js          # Built-in fallback catalog
+│   └── store.js             # Local likes/history state
+├── tests/
+│   └── smoke.py
+├── .github/workflows/
+│   └── smoke.yml
+├── index.html
+├── styles.css
+├── manifest.webmanifest
+├── sw.js
+└── vercel.json
+```
 
 ## Run locally
 
-Any static web server works. For example:
+No build step is required.
 
 ```bash
 python -m http.server 4173
@@ -42,30 +92,46 @@ Then open `http://localhost:4173`.
 
 ## Keyboard controls
 
-- `/` focus search
-- `Space` play / pause
-- `Alt + →` next track
-- `Alt + ←` previous track
+| Shortcut | Action |
+| --- | --- |
+| `/` | Focus search |
+| `Space` | Play / pause |
+| `Alt + →` | Next track |
+| `Alt + ←` | Previous track |
+
+## Validation
+
+Run the repository smoke test with:
+
+```bash
+python tests/smoke.py
+```
+
+The test validates required project files, local HTML references, DOM IDs used by the JavaScript controller, the fallback audio path, the manifest, and Vercel configuration.
 
 ## Deployment
 
-Auralis is static and can be deployed directly to Vercel. `vercel.json` adds basic security headers and clean URLs.
+Auralis is a static application and deploys directly to Vercel. The checked-in `vercel.json` enables clean URLs and adds basic security headers.
+
+Production: **https://auralis-music-lime.vercel.app**
 
 ## Music & rights
 
-Auralis does not scrape, download, or re-host commercial recordings. Live catalog playback is requested from the active provider and remains subject to the creator/provider permissions attached to each track. The fallback audio is synthesized locally in the browser and is not copied from any commercial recording.
+Auralis does not scrape, download, or re-host commercial recordings. Live catalog playback is requested from the active provider and remains subject to the permissions and terms associated with each track and provider. The built-in fallback audio is synthesized locally in the browser and is not copied from any commercial recording.
 
 ## Roadmap
 
-- Supabase authentication and cloud-synced playlists
-- Additional music provider adapters
-- Artist and album detail routes
+- Supabase authentication and cloud-synced libraries
+- Account-backed playlists
+- Additional legal music provider adapters
+- Artist and album detail pages
+- Better multi-provider search ranking and de-duplication
 - Collaborative playlists
 - Recommendation engine based on listening history
-- Lyrics integration where licenses permit
+- Lyrics integration where licensing permits
 - Shareable listening rooms
-- Automated tests and performance budgets
+- Listening statistics and personalized discovery
 
 ## License
 
-The application source code is MIT licensed. Third-party music and metadata remain subject to their respective provider and creator terms.
+The Auralis application source code is released under the [MIT License](LICENSE). Third-party music and metadata remain subject to their respective provider and creator terms.
