@@ -113,6 +113,8 @@ The test validates required project files, local HTML references, DOM IDs used b
 
 Auralis is a static application and deploys directly to Vercel. The checked-in `vercel.json` enables clean URLs and adds basic security headers.
 
+The GitHub repository is connected directly to the Vercel project: pushes to `main` trigger production deployments, while branch and pull-request pushes can create preview deployments.
+
 Production: **https://auralis-music-lime.vercel.app**
 
 ## Music & rights
