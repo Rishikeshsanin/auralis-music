@@ -32,6 +32,7 @@ jobs:
           node --check js/row-play-targets.js
           node --check js/radio-reliability-v6.js
           node --check js/auralis-experience-v7.js
+          node --check js/konkani-radio-v7.js
           node --check js/app-v2.js
           node --check js/collections.js
           node --check js/library-map.js
