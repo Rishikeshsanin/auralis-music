@@ -359,15 +359,18 @@
   function waitForRadioResult(name, timeout = 7000) {
     const wanted = stationKey(name);
     return new Promise(resolve => {
+      let changed = false;
+      const cardsNow = () => [...document.querySelectorAll('#radioGrid .radio-card')];
       const find = () => {
-        const cards = [...document.querySelectorAll('#radioGrid .radio-card')];
+        const cards = cardsNow();
         return cards.find(card => stationKey(card.querySelector('strong')?.textContent || '') === wanted)
-          || cards.find(card => stationKey(card.querySelector('strong')?.textContent || '').includes(wanted))
-          || cards[0];
+          || cards.find(card => {
+            const key = stationKey(card.querySelector('strong')?.textContent || '');
+            return key && wanted && (key.includes(wanted) || wanted.includes(key));
+          });
       };
-      const immediate = find();
-      if (immediate) return resolve(immediate);
       const observer = new MutationObserver(() => {
+        changed = true;
         const match = find();
         if (!match) return;
         observer.disconnect();
@@ -375,7 +378,10 @@
       });
       const grid = document.querySelector('#radioGrid');
       if (grid) observer.observe(grid, { childList: true, subtree: true });
-      setTimeout(() => { observer.disconnect(); resolve(find()); }, timeout);
+      setTimeout(() => {
+        observer.disconnect();
+        resolve(find() || (changed ? cardsNow()[0] : null));
+      }, timeout);
     });
   }
 
