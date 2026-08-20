@@ -30,6 +30,7 @@ jobs:
         run: |
           node --check js/app-v3.js
           node --check js/row-play-targets.js
+          node --check js/radio-reliability-v6.js
           node --check js/app-v2.js
           node --check js/collections.js
           node --check js/library-map.js
@@ -40,4 +41,6 @@ jobs:
           node --check api/radio.js
 
       - name: Run Auralis smoke tests
-        run: python tests/smoke.py
+        run: |
+          python tests/smoke.py
+          python tests/radio_v6.py
