@@ -22,11 +22,14 @@ for ident in set(re.findall(r"\$\('#([^']+)'\)",app)):
     assert f'id="{ident}"' in html, f'JS references missing id #{ident}'
 
 collections=(root/'js/collections.js').read_text()
+audius=(root/'js/providers/audius.js').read_text()
 assert collections.count("id:'") >= 16, 'expected at least 16 curated collections'
 assert 'multiSearch' in app, 'multi-provider search missing'
 assert 'jamendoProvider' in app, 'Jamendo integration missing'
 assert 'audiusProvider' in app, 'Audius integration missing'
 assert 'makeDemoAudio' in app, 'offline/demo playback fallback missing'
+assert 'crossorigin="anonymous"' not in html, 'audio element must not force CORS mode for provider streams'
+assert 'isStreamable' in audius, 'Audius streamability guard missing'
 assert 'AGENTS.md' in (root/'SUPABASE_HUB_RULES.md').read_text(), 'Project Hub repo safety contract incomplete'
 
 manifest=json.loads((root/'manifest.webmanifest').read_text())

@@ -7,6 +7,13 @@ function artworkOf(track) {
   return art['480x480'] || art['150x150'] || art['1000x1000'] || art._480x480 || art._150x150 || art._1000x1000 || '';
 }
 
+function streamableValue(track) {
+  const value = track?.is_streamable ?? track?.isStreamable;
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string') return value.toLowerCase() !== 'false';
+  return value !== false;
+}
+
 function normalize(track) {
   return {
     id: `audius:${track.id}`,
@@ -20,6 +27,7 @@ function normalize(track) {
     genre: track.genre || track.mood || 'Open music',
     playCount: Number(track.play_count ?? track.playCount ?? 0),
     permalink: track.permalink || '',
+    isStreamable: streamableValue(track),
     streamUrl: `${BASE}/tracks/${encodeURIComponent(track.id)}/stream?app_name=${APP_NAME}`
   };
 }
@@ -34,7 +42,7 @@ async function request(path, params = {}) {
   if (!response.ok) throw new Error(`Audius request failed (${response.status})`);
   const json = await response.json();
   const data = Array.isArray(json.data) ? json.data : [];
-  return data.map(normalize).filter(track => track.streamUrl);
+  return data.map(normalize).filter(track => track.isStreamable && track.streamUrl);
 }
 
 async function endpointOrSearch(path, searchQuery, limit = 30, params = {}) {
