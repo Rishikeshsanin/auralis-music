@@ -1,0 +1,363 @@
+/* Auralis Radio Polish v5
+   Restores the music-first radio hierarchy and adds consistent loading feedback. */
+
+#radioView { display: flex; flex-direction: column; }
+#radioView .radio-hero { order: 0; }
+#radioView .radio-toolbar { order: 1; }
+#radioPopularBlockV5 { order: 2; }
+#radioLanguagesV5 { order: 3; }
+
+/* Search belongs at the top of the Radio experience. */
+#radioView .radio-toolbar {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 28px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 8% 20%, rgba(101,210,255,.075), transparent 32%),
+    linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+  box-shadow: 0 18px 48px rgba(0,0,0,.12);
+}
+#radioView .radio-search {
+  min-height: 58px;
+  border-radius: 16px;
+  background: rgba(4,6,10,.46);
+  border-color: rgba(255,255,255,.095);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+#radioView .radio-search:focus-within {
+  border-color: rgba(101,210,255,.32);
+  box-shadow: 0 0 0 4px rgba(101,210,255,.055), 0 16px 35px rgba(0,0,0,.18);
+  background: rgba(7,9,14,.68);
+}
+#radioView .radio-tags { padding-top: 2px; }
+#radioView .radio-tags button { backdrop-filter: blur(8px); }
+
+/* Bring back the simpler popular-stations block from the previous radio layout. */
+.radio-popular-v5 {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 34px;
+}
+.radio-popular-v5 .compact-heading {
+  margin: 0;
+  padding: 0 2px;
+}
+.radio-popular-v5 .compact-heading h2 {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 21px;
+}
+.radio-popular-v5 .compact-heading h2::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #70e6b1;
+  box-shadow: 0 0 16px rgba(112,230,177,.48);
+}
+.radio-popular-v5 #radioGrid {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 10px;
+}
+.radio-popular-v5 .radio-card {
+  min-height: 82px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(112,230,177,.045), transparent 32%),
+    linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.014));
+}
+.radio-popular-v5 .radio-card:hover,
+.radio-popular-v5 .radio-card.active {
+  border-color: rgba(112,230,177,.22);
+  box-shadow: 0 14px 34px rgba(0,0,0,.12);
+}
+
+/* Language lanes: one visual home for English + Indian regional radio. */
+.radio-languages-v5 {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 34px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255,255,255,.055);
+}
+.radio-v5-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+.radio-v5-heading > div { display: grid; gap: 5px; }
+.radio-v5-heading h2 { margin: 0; font-size: 21px; }
+.radio-v5-heading p {
+  max-width: 720px;
+  margin: 0;
+  color: #747887;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.radio-v5-pill {
+  flex: none;
+  border: 1px solid rgba(169,120,255,.18);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(169,120,255,.055);
+  color: #bca7ff;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .75px;
+  text-transform: uppercase;
+}
+
+.radio-language-sections-v5 {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 12px;
+}
+.radio-language-group-v5 {
+  position: relative;
+  overflow: hidden;
+  min-height: 154px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(169,120,255,.055), transparent 34%),
+    linear-gradient(145deg,rgba(255,255,255,.034),rgba(255,255,255,.011));
+}
+.radio-language-group-v5:first-child {
+  grid-column: 1 / -1;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(101,210,255,.08), transparent 34%),
+    linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.012));
+}
+.radio-language-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.radio-language-group-head > div { display: grid; gap: 2px; }
+.radio-language-group-head strong { font-size: 13px; }
+.radio-language-group-head small { color: #747887; font-size: 8.5px; }
+.radio-language-mark {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(6,8,12,.54);
+  color: #dadce6;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: -.25px;
+}
+.radio-language-group-v5:first-child .radio-language-mark {
+  color: #8ddcff;
+  border-color: rgba(101,210,255,.14);
+  background: rgba(101,210,255,.055);
+}
+
+.radio-language-stations-v5 {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+.radio-language-group-v5:first-child .radio-language-stations-v5 {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+}
+.v5-language-station {
+  min-width: 0;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 44px minmax(0,1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 15px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: rgba(255,255,255,.018);
+  transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.v5-language-station:hover {
+  transform: translateY(-2px);
+  border-color: rgba(169,120,255,.2);
+  background: rgba(169,120,255,.045);
+  box-shadow: 0 12px 26px rgba(0,0,0,.1);
+}
+.v5-radio-logo {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(169,120,255,.18), transparent 38%),
+    #151820;
+  color: #d9dbe5;
+  font-size: 10px;
+  font-weight: 850;
+}
+.v5-radio-logo img { width: 100%; height: 100%; object-fit: cover; }
+.v5-language-station-copy { min-width: 0; display: grid; gap: 3px; }
+.v5-language-station-copy strong,
+.v5-language-station-copy small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v5-language-station-copy strong { font-size: 10.5px; }
+.v5-language-station-copy small { color: #6f7381; font-size: 7.8px; }
+.v5-live { color: #75dcb9; font-size: 6.5px; font-weight: 900; letter-spacing: .75px; }
+.v5-station-play {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  color: #dfe1e8;
+  font-size: 8px;
+  transition: transform .18s ease, background .18s ease;
+}
+.v5-language-station:hover .v5-station-play { transform: scale(1.06); background: #f4f2ff; color: #111219; }
+.v5-language-empty {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: 30px minmax(0,1fr);
+  gap: 3px 9px;
+  align-content: center;
+  padding: 10px;
+  border: 1px dashed rgba(255,255,255,.07);
+  border-radius: 14px;
+  color: #727684;
+}
+.v5-language-empty span { grid-row: 1 / span 2; align-self: center; }
+.v5-language-empty strong { color: #a7aab5; font-size: 10px; }
+.v5-language-empty small { font-size: 8px; }
+
+/* Station icon fallbacks stay elegant instead of broken-image boxes. */
+.radio-logo .radio-fallback-mark {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 20%,rgba(169,120,255,.2),transparent 38%),#171a20;
+  color: #d8dae4;
+  font-size: 11px;
+  font-weight: 850;
+}
+.radio-logo.logo-fallback { background: #171a20; }
+
+/* Unified backend-loading shimmer. */
+.skeleton,
+.auralis-skeleton-block,
+.auralis-skeleton-copy i {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255,255,255,.045) !important;
+}
+.skeleton::after,
+.auralis-skeleton-block::after,
+.auralis-skeleton-copy i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-115%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.085), transparent);
+  animation: auralisShimmer 1.25s ease-in-out infinite;
+}
+@keyframes auralisShimmer { to { transform: translateX(115%); } }
+
+.skeleton {
+  min-height: 210px;
+  border: 1px solid rgba(255,255,255,.045);
+  border-radius: 18px;
+}
+.auralis-loading-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 10px;
+}
+.auralis-loading-grid.rows { grid-template-columns: 1fr; }
+.auralis-loading-grid.language { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.auralis-skeleton-card {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 48px minmax(0,1fr);
+  gap: 11px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 16px;
+  background: rgba(255,255,255,.012);
+}
+.auralis-loading-grid.cards .auralis-skeleton-card { min-height: 205px; grid-template-columns: 1fr; align-content: end; }
+.auralis-loading-grid.cards .auralis-skeleton-block.media { width: 100%; height: 132px; }
+.auralis-loading-grid.rows .auralis-skeleton-card { grid-template-columns: 42px minmax(0,1fr); min-height: 66px; }
+.auralis-skeleton-block.media { width: 48px; height: 48px; border-radius: 12px; }
+.auralis-skeleton-copy { min-width: 0; display: grid; gap: 7px; }
+.auralis-skeleton-copy i { display: block; height: 7px; border-radius: 999px; }
+.auralis-skeleton-copy i:nth-child(1) { width: 72%; }
+.auralis-skeleton-copy i:nth-child(2) { width: 48%; opacity: .78; }
+.auralis-skeleton-copy i:nth-child(3) { width: 34%; opacity: .55; }
+
+.auralis-button-loading { position: relative; pointer-events: none; }
+.auralis-button-loading::after {
+  content: "";
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-left: 7px;
+  vertical-align: -1px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: auralisSpin .72s linear infinite;
+}
+@keyframes auralisSpin { to { transform: rotate(360deg); } }
+
+.auralis-image-loading { opacity: .2; transition: opacity .28s ease, transform .28s ease; }
+.auralis-image-loading.auralis-image-loaded { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .auralis-skeleton-block::after,
+  .auralis-skeleton-copy i::after,
+  .auralis-button-loading::after { animation: none; }
+  .auralis-image-loading { transition: none; }
+}
+
+@media (max-width: 1100px) {
+  .radio-popular-v5 #radioGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .radio-language-group-v5:first-child .radio-language-stations-v5 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .auralis-loading-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 820px) {
+  .radio-language-sections-v5 { grid-template-columns: 1fr; }
+  .radio-language-group-v5:first-child { grid-column: auto; }
+  .radio-v5-heading { align-items: flex-start; }
+}
+
+@media (max-width: 680px) {
+  #radioView .radio-toolbar { padding: 10px; border-radius: 17px; }
+  .radio-popular-v5 #radioGrid,
+  .radio-language-group-v5:first-child .radio-language-stations-v5,
+  .radio-language-stations-v5,
+  .auralis-loading-grid,
+  .auralis-loading-grid.language { grid-template-columns: 1fr; }
+  .radio-v5-pill { display: none; }
+  .radio-language-group-v5 { padding: 12px; border-radius: 17px; }
+  .v5-language-station { min-height: 72px; }
+}
