@@ -12,22 +12,10 @@ function clampInt(value, fallback, min, max) {
 
 function buildPath(mode, query, limit, offset) {
   const common = new URLSearchParams({
-    hidebroken: 'true',
-    order: 'clickcount',
-    reverse: 'true',
-    limit: String(limit),
-    offset: String(offset)
+    hidebroken: 'true', order: 'clickcount', reverse: 'true', limit: String(limit), offset: String(offset)
   });
-
-  if (mode === 'tag' && query) {
-    return `/json/stations/bytag/${encodeURIComponent(query)}?${common}`;
-  }
-
-  if (mode === 'search' && query) {
-    common.set('name', query);
-    return `/json/stations/search?${common}`;
-  }
-
+  if (mode === 'tag' && query) return `/json/stations/bytag/${encodeURIComponent(query)}?${common}`;
+  if (mode === 'search' && query) { common.set('name', query); return `/json/stations/search?${common}`; }
   return `/json/stations/search?${common}`;
 }
 
@@ -36,17 +24,12 @@ async function fetchStations(path) {
   for (const base of BASES) {
     try {
       const response = await fetch(`${base}${path}`, {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'AuralisMusic/3.0 (college portfolio music platform)'
-        }
+        headers: { 'Accept': 'application/json', 'User-Agent': 'AuralisMusic/3.0 (college portfolio music platform)' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const json = await response.json();
       if (Array.isArray(json)) return json;
-    } catch (error) {
-      lastError = error;
-    }
+    } catch (error) { lastError = error; }
   }
   throw lastError || new Error('Radio Browser unavailable');
 }
@@ -64,24 +47,20 @@ export default async function handler(req, res) {
 
   try {
     let stations = await fetchStations(buildPath(mode, query, limit, offset));
-
     if (mode === 'search' && query && stations.length < Math.min(6, limit)) {
       const byTag = await fetchStations(buildPath('tag', query, limit, offset)).catch(() => []);
       const seen = new Set(stations.map(station => station.stationuuid));
       stations = [...stations, ...byTag.filter(station => !seen.has(station.stationuuid))].slice(0, limit);
     }
 
-    stations = stations
-      .filter(station => station?.stationuuid && (station.url_resolved || station.url) && Number(station.lastcheckok ?? 1) !== 0)
-      .slice(0, limit);
+    stations = stations.filter(station => {
+      const streamUrl = station?.url_resolved || station?.url || '';
+      return station?.stationuuid && streamUrl.startsWith('https://') && Number(station.lastcheckok ?? 1) !== 0;
+    }).slice(0, limit);
 
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');
     return res.status(200).json({ provider: 'Radio Browser', stations });
   } catch (error) {
-    return res.status(503).json({
-      provider: 'Radio Browser',
-      stations: [],
-      error: 'Live radio provider is temporarily unavailable'
-    });
+    return res.status(503).json({ provider: 'Radio Browser', stations: [], error: 'Live radio provider is temporarily unavailable' });
   }
 }
