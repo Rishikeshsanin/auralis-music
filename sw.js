@@ -1,4 +1,4 @@
-const CACHE='auralis-shell-v8';
+const CACHE='auralis-shell-v9';
 const SHELL=[
   './','./index.html','./styles.css','./fixes.css','./experience.css','./experience-v3.css','./experience-v4.css','./experience-v5.css',
   './js/app-v3.js','./js/row-play-targets.js','./js/store.js','./js/fallback.js','./js/collections.js','./js/library-map.js',

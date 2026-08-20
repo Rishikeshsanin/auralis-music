@@ -62,7 +62,9 @@ assert 'radioPopularBlockV5' in enhancements and 'radioLanguagesV5' in enhanceme
 assert 'auralis-loading-grid' in enhancements and 'LOADING_WORDS' in enhancements, 'loading-state enhancer missing'
 assert 'experience-v5.css' in enhancements, 'v5 stylesheet loader missing'
 assert '@keyframes auralisShimmer' in v5_css and 'radio-language-sections-v5' in v5_css, 'v5 radio styling incomplete'
-assert "auralis-shell-v8" in sw and 'experience-v5.css' in sw, 'PWA v5 shell cache missing'
+assert '#radioPopularBlockV5 { order: 0; }' in v5_css, 'popular radio must be first in the radio view'
+assert '#radioView .radio-hero { order: 1; }' in v5_css and '#radioView .radio-toolbar { order: 2; }' in v5_css, 'radio sections ordered incorrectly'
+assert "auralis-shell-v9" in sw and 'experience-v5.css' in sw, 'PWA radio-order cache missing'
 
 manifest = json.loads((root / 'manifest.webmanifest').read_text())
 assert manifest['name'] == 'Auralis Music'

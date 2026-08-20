@@ -2,12 +2,12 @@
    Restores the music-first radio hierarchy and adds consistent loading feedback. */
 
 #radioView { display: flex; flex-direction: column; }
-#radioView .radio-hero { order: 0; }
-#radioView .radio-toolbar { order: 1; }
-#radioPopularBlockV5 { order: 2; }
+#radioPopularBlockV5 { order: 0; }
+#radioView .radio-hero { order: 1; }
+#radioView .radio-toolbar { order: 2; }
 #radioLanguagesV5 { order: 3; }
 
-/* Search belongs at the top of the Radio experience. */
+/* Popular worldwide is the first thing listeners see; search follows the radio intro. */
 #radioView .radio-toolbar {
   position: relative;
   z-index: 2;
