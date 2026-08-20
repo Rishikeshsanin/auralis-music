@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#08090d" />
-  <meta name="description" content="Auralis — an elegant open music experience powered by programmable music catalogs." />
+  <meta name="description" content="Auralis — a premium multi-catalog music discovery and listening experience." />
   <title>Auralis — Listen differently</title>
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./fixes.css" />
+  <link rel="stylesheet" href="./experience.css" />
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -25,6 +26,7 @@
       <nav class="nav-group" id="desktopNav">
         <button class="nav-item active" data-view="home"><span>⌂</span> Home</button>
         <button class="nav-item" data-view="discover"><span>✦</span> Discover</button>
+        <button class="nav-item" data-view="collections"><span>▦</span> Collections</button>
         <button class="nav-item" data-view="liked"><span>♡</span> Liked songs</button>
         <button class="nav-item" data-view="recent"><span>↺</span> Recently played</button>
       </nav>
@@ -37,9 +39,9 @@
 
       <div class="sidebar-card">
         <div class="live-dot"></div>
-        <p>Open catalog</p>
-        <strong>Powered by Audius</strong>
-        <small>Streaming availability follows each creator's catalog permissions.</small>
+        <p>Multi-source catalog</p>
+        <strong>Audius + Jamendo</strong>
+        <small>Playable music is normalized into one Auralis queue. Provider availability follows creator and catalog permissions.</small>
       </div>
     </aside>
 
@@ -47,11 +49,11 @@
       <header class="topbar">
         <div class="search-wrap">
           <span class="search-icon">⌕</span>
-          <input id="searchInput" type="search" autocomplete="off" placeholder="Search tracks, artists, moods..." aria-label="Search music" />
+          <input id="searchInput" type="search" autocomplete="off" placeholder="Search tracks, artists, genres, moods..." aria-label="Search music" />
           <kbd>/</kbd>
         </div>
         <div class="top-actions">
-          <button class="icon-button" id="refreshButton" aria-label="Refresh music" title="Refresh">↻</button>
+          <button class="icon-button" id="refreshButton" aria-label="Refresh music" title="Refresh catalogs">↻</button>
           <button class="profile-pill" aria-label="Profile">
             <span class="profile-avatar">R</span>
             <span>Listener</span>
@@ -63,13 +65,14 @@
         <section id="homeView" class="view active-view">
           <div class="hero">
             <div class="hero-copy">
-              <p class="eyebrow">OPEN MUSIC · BEAUTIFUL PLAYER</p>
+              <p class="eyebrow">MULTI-CATALOG MUSIC · BEAUTIFUL PLAYER</p>
               <h1>Music for the moment<br/><em>you’re actually in.</em></h1>
-              <p class="hero-sub">Search an open catalog, build your queue, keep your favorites, and let the interface disappear into the music.</p>
+              <p class="hero-sub">Search multiple open catalogs, jump through curated worlds, build your queue, keep your favorites, and let the interface disappear into the music.</p>
               <div class="hero-actions">
                 <button class="primary-button" id="heroPlayButton"><span>▶</span> Play something good</button>
-                <button class="ghost-button" data-view-trigger="discover">Explore moods</button>
+                <button class="ghost-button" data-view-trigger="collections">Browse collections</button>
               </div>
+              <div class="catalog-kicker"><span><strong>Audius</strong> full streams</span><span><strong>Jamendo</strong> independent catalog</span><span><strong>16</strong> curated collections</span></div>
             </div>
             <div class="hero-orbit" aria-hidden="true">
               <div class="record">
@@ -78,21 +81,43 @@
                 <div class="record-ring ring-3"></div>
                 <div class="record-label"><span>A</span></div>
               </div>
-              <div class="floating-chip chip-a">Late night</div>
-              <div class="floating-chip chip-b">Focus</div>
-              <div class="floating-chip chip-c">Fresh finds</div>
+              <div class="floating-chip chip-a">Night drive</div>
+              <div class="floating-chip chip-b">Deep focus</div>
+              <div class="floating-chip chip-c">Under the radar</div>
             </div>
           </div>
 
           <section class="section-block">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">CURATED FOR NOW</p>
-                <h2>Trending on the open catalog</h2>
+                <p class="eyebrow">PLAYING ACROSS CATALOGS</p>
+                <h2>Trending right now</h2>
               </div>
               <button class="text-button" id="seeAllTrending">See all →</button>
             </div>
             <div class="card-grid" id="trendingGrid" aria-live="polite"></div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">AURALIS COLLECTIONS</p>
+                <h2>Pick a world, not just a genre</h2>
+              </div>
+              <button class="text-button" id="browseAllCollections">All collections →</button>
+            </div>
+            <div class="collection-grid home-collection-grid" id="homeCollectionGrid"></div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">CATALOG NETWORK</p>
+                <h2>More music, one player</h2>
+              </div>
+            </div>
+            <div class="provider-strip" id="providerStrip"></div>
+            <div class="catalog-note"><strong>College build</strong><span>Auralis uses official provider APIs and only plays streams those providers expose for off-platform use. SoundCloud is staged for a later credentialed integration.</span></div>
           </section>
 
           <section class="section-block mood-section">
@@ -127,13 +152,23 @@
           <div class="page-heading">
             <p class="eyebrow">DISCOVER</p>
             <h1>Find your next repeat.</h1>
-            <p>Use a mood below or search anything above. Results come from the active open music provider.</p>
+            <p>Search across catalogs, open a collection, or use a genre below. Auralis normalizes playable tracks into one queue.</p>
           </div>
           <div class="genre-pills" id="genrePills">
-            <button data-query="electronic">Electronic</button><button data-query="hip hop">Hip-Hop</button><button data-query="rock">Rock</button><button data-query="ambient">Ambient</button><button data-query="house">House</button><button data-query="lofi">Lo-fi</button><button data-query="indie">Indie</button><button data-query="remix">Remixes</button>
+            <button data-query="electronic">Electronic</button><button data-query="hip hop">Hip-Hop</button><button data-query="rock">Rock</button><button data-query="ambient">Ambient</button><button data-query="house">House</button><button data-query="lofi">Lo-fi</button><button data-query="indie">Indie</button><button data-query="remix">Remixes</button><button data-query="jazz">Jazz</button><button data-query="classical">Classical</button><button data-query="world music">World</button><button data-query="soundtrack">Soundtrack</button>
           </div>
           <div class="section-heading compact-heading"><h2 id="discoverTitle">Fresh discoveries</h2><span id="resultMeta"></span></div>
           <div class="track-list full-list" id="discoverList"></div>
+        </section>
+
+        <section id="collectionsView" class="view">
+          <div class="collection-view-hero">
+            <p class="eyebrow">AURALIS COLLECTIONS</p>
+            <h1>Sixteen ways into the catalog.</h1>
+            <p>These are not hard-coded playlists. Each collection resolves into fresh playable tracks from Audius, Jamendo, or both—so the list can evolve every time you return.</p>
+            <div class="collection-view-meta"><span id="collectionCount">16 curated collections</span><span>2 active catalog sources</span><span>1 unified player</span><span>More providers staged</span></div>
+          </div>
+          <div class="collection-grid" id="collectionGrid"></div>
         </section>
 
         <section id="likedView" class="view">
@@ -142,12 +177,12 @@
         </section>
 
         <section id="recentView" class="view">
-          <div class="page-heading"><p class="eyebrow">HISTORY</p><h1>Recently played</h1><p>A local listening trail stored on this device.</p></div>
+          <div class="page-heading"><p class="eyebrow">HISTORY</p><h1>Recently played</h1><p>A local listening trail stored on this device until Auralis Cloud sync is enabled.</p></div>
           <div class="track-list full-list" id="recentList"></div>
         </section>
 
         <section id="searchView" class="view">
-          <div class="page-heading"><p class="eyebrow">SEARCH RESULTS</p><h1 id="searchTitle">Search Auralis</h1><p id="searchSubtitle">Start typing to search the open catalog.</p></div>
+          <div class="page-heading"><p class="eyebrow">MULTI-CATALOG SEARCH</p><h1 id="searchTitle">Search Auralis</h1><p id="searchSubtitle">Start typing to search playable music across the active catalogs.</p></div>
           <div class="track-list full-list" id="searchList"></div>
         </section>
       </div>
@@ -164,7 +199,7 @@
   <div class="player" id="playerBar">
     <div class="player-track">
       <div class="player-cover placeholder-cover" id="playerCover"><span>A</span></div>
-      <div class="player-meta"><strong id="playerTitle">Choose a track</strong><span id="playerArtist">Auralis</span></div>
+      <div class="player-meta"><strong id="playerTitle">Choose a track</strong><span id="playerArtist">Auralis</span><small class="player-source" id="playerSource">Multi-source player</small></div>
       <button class="like-button" id="playerLike" aria-label="Like current track">♡</button>
     </div>
     <div class="player-center">
@@ -188,12 +223,13 @@
   <nav class="mobile-nav" aria-label="Mobile navigation">
     <button class="active" data-view="home"><span>⌂</span><small>Home</small></button>
     <button data-view="discover"><span>✦</span><small>Discover</small></button>
+    <button data-view="collections"><span>▦</span><small>Collections</small></button>
     <button data-view="liked"><span>♡</span><small>Liked</small></button>
     <button data-view="recent"><span>↺</span><small>Recent</small></button>
   </nav>
 
   <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app-v2.js"></script>
 </body>
 </html>
