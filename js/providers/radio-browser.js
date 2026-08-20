@@ -1,8 +1,22 @@
+import '../radio-reliability-v6.js';
+
 const ENDPOINT = '/api/radio';
+
+if (!document.querySelector('link[data-auralis-radio-v6]')) {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = './experience-v6.css';
+  link.dataset.auralisRadioV6 = 'true';
+  document.head.append(link);
+}
 
 function normalize(station) {
   const tags = String(station.tags || '').split(',').map(tag => tag.trim()).filter(Boolean);
   const location = [station.country, station.language].filter(Boolean).join(' · ');
+  const rawStream = station.url_resolved || station.url || '';
+  const streamUrl = station.auralis_stream_type === 'hls' && rawStream && !/\.m3u8(?:$|\?)/i.test(rawStream)
+    ? `${rawStream}#auralis-hls`
+    : rawStream;
   return {
     id: `radio:${station.stationuuid}`,
     providerId: station.stationuuid,
@@ -16,11 +30,13 @@ function normalize(station) {
     playCount: Number(station.clickcount || station.votes || 0),
     permalink: station.homepage || '',
     isLive: true,
+    verified: Boolean(station.auralis_verified),
+    streamType: station.auralis_stream_type || 'direct',
     codec: station.codec || '',
     bitrate: Number(station.bitrate || 0),
     country: station.country || '',
     language: station.language || '',
-    streamUrl: station.url_resolved || station.url || ''
+    streamUrl
   };
 }
 
@@ -39,7 +55,7 @@ export const radioBrowserProvider = {
   id: 'radio-browser',
   name: 'Radio Browser',
   kind: 'radio',
-  capabilities: ['live-radio','search','genres','pagination'],
+  capabilities: ['live-radio','search','genres','pagination','verified-streams','hls'],
 
   async top(limit = 24, offset = 0) {
     return request({ mode: 'top', limit, offset });
