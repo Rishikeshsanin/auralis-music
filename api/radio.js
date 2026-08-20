@@ -5,7 +5,7 @@ const BASES = [
 ];
 
 const MUSIC_POSITIVE = /\b(pop|rock|hits?|music|dance|edm|electronic|house|techno|trance|hip[ -]?hop|r&b|rnb|soul|jazz|oldies|classic|80s|90s|2000s|alternative|indie|bollywood|melod(?:y|ies)|songs?|chart|top\s?40|anthems?|retro|disco)\b/i;
-const MUSIC_NEGATIVE = /\b(news|talk|speech|podcast|politic|traffic|weather|sports? talk|religious|christian|gospel|quran|islamic|sermon|church|bible|business news)\b/i;
+const MUSIC_NEGATIVE = /\b(news|talk|speech|spoken word|podcast|politic|traffic|weather|sports? talk|religious|christian|gospel|quran|islamic|sermon|church|bible|business news|old time radio|otr|radio drama|audiobook)\b/i;
 const ENGLISH_COUNTRIES = new Set(['GB', 'US', 'CA', 'AU', 'NZ', 'IE']);
 
 function clampInt(value, fallback, min, max) {
@@ -127,23 +127,33 @@ function isHindiStation(station) {
 function brandBoost(station) {
   const name = String(station?.name || '').toLowerCase();
   const country = String(station?.countrycode || '').toUpperCase();
-  if (country === 'GB' && name.includes('capital fm london')) return 2400;
-  if (country === 'GB' && name.includes('bbc radio 1')) return 2200;
-  if (country === 'US' && name.includes('radio paradise')) return 1800;
-  if (country === 'GB' && name.includes('absolute radio')) return 1500;
-  if (country === 'GB' && name.includes('kiss')) return 1300;
-  if (country === 'IN' && name.includes('radio mirchi hindi')) return 2200;
-  if (country === 'IN' && /red fm 93\.5/i.test(station?.name || '')) return 1800;
-  if (country === 'IN' && /vividh bharati/i.test(station?.name || '')) return 1500;
+  if (country === 'US' && /102\.7 kiis|kiis fm/.test(name)) return 5200;
+  if (country === 'US' && /z100/.test(name)) return 4800;
+  if (country === 'GB' && /capital.*(uk|london)|capital fm london/.test(name)) return 5000;
+  if (country === 'GB' && name.includes('bbc radio 1')) return 4500;
+  if (country === 'US' && name.includes('radio paradise')) return 4300;
+  if (country === 'GB' && name.includes('heart 80s')) return 3600;
+  if (country === 'GB' && name.includes('absolute radio')) return 3400;
+  if (country === 'GB' && /\bkiss\b/.test(name)) return 3000;
+  if (country === 'IN' && name.includes('radio mirchi hindi')) return 4200;
+  if (country === 'IN' && /red fm 93\.5/i.test(station?.name || '')) return 3500;
+  if (country === 'IN' && /vividh bharati/i.test(station?.name || '')) return 3000;
   return 0;
 }
 
 function popularMusicScore(station) {
   const text = stationText(station);
-  let score = Number(station.auralis_score || popularityScore(station));
-  if (/\b(pop|hits?|top\s?40|chart|anthems?)\b/i.test(text)) score += 500;
-  if (/\b(rock|alternative|indie|dance|electronic|house|hip[ -]?hop|r&b|rnb)\b/i.test(text)) score += 220;
-  if (isEnglishStation(station)) score += 800;
+  const clicks = Number(station?.clickcount || 0);
+  const votes = Number(station?.votes || 0);
+  const bitrate = Math.min(320, Number(station?.bitrate || 0));
+
+  // Radio Browser vote totals can be extremely skewed. Use a logarithm here so
+  // current listening activity and recognizable music brands matter more than
+  // years of accumulated directory votes.
+  let score = clicks * 25 + Math.log10(votes + 1) * 900 + bitrate / 8;
+  if (/\b(pop|hits?|top\s?40|chart|anthems?)\b/i.test(text)) score += 750;
+  if (/\b(rock|alternative|indie|dance|electronic|house|hip[ -]?hop|r&b|rnb|jazz|oldies|classic hits)\b/i.test(text)) score += 300;
+  if (isEnglishStation(station)) score += 900;
   score += brandBoost(station);
   return score;
 }
