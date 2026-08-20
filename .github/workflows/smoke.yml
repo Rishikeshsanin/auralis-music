@@ -21,5 +21,17 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check js/app-v2.js
+          node --check js/collections.js
+          node --check js/providers/audius.js
+          node --check js/providers/jamendo.js
+
       - name: Run Auralis smoke tests
         run: python tests/smoke.py
