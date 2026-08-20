@@ -1,6 +1,6 @@
 # Auralis 🎧
 
-> A polished, responsive multi-catalog music discovery platform with full-track catalogs, live radio, dynamic collections, genre/mood worlds, guest personalization, queueing, likes, history, and a premium interface.
+> A polished, responsive multi-catalog music discovery platform with full-track catalogs, music-first live radio, dynamic collections, genre/mood worlds, guest personalization, queueing, likes, history, and a premium interface.
 
 [![Smoke Test](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml/badge.svg)](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml)
 [![Live on Vercel](https://img.shields.io/badge/Live-Vercel-000000?logo=vercel)](https://auralis-music-lime.vercel.app)
@@ -10,18 +10,55 @@
 
 ## Why Auralis
 
-Auralis is not a static Spotify mockup. It has a provider-management layer that normalizes different audio sources into one discovery and playback experience.
+Auralis is not a static Spotify mockup. It normalizes different open audio sources into one discovery and playback experience.
 
 - **Audius** is the primary open full-stream music backbone.
 - **Jamendo** adds an independent full-track catalog.
-- **Radio Browser** adds worldwide live radio through a small same-origin Vercel API proxy.
+- **Radio Browser** adds worldwide live radio through a same-origin Vercel API proxy.
 - Future credentialed providers can be added as adapters without rewriting the core player, queue or browse system.
 
-The product is built around discovery rather than copying Spotify's exact information architecture: **44 dynamic collections, 24 genre worlds, 16 mood worlds, India-first and worldwide live radio, expandable shelves, guest personalization and one unified player.**
+The product is built around discovery rather than copying another service's exact information architecture: **44 dynamic collections, 24 genre worlds, 16 mood worlds, music-first live radio, guest personalization and one unified player.**
 
-## Radio + Personalization v4
+## Radio Polish v5
 
-### Guest personalization
+The radio experience is intentionally ordered around music rather than raw station-directory counts:
+
+1. **Search first** — station search and genre chips sit at the top of the Radio page.
+2. **Popular music stations** — an English/global-heavy music feed appears first, using healthy HTTPS streams only.
+3. **Limited Hindi in Popular** — at most three strong Hindi choices are mixed into the popular feed before it returns to English/global music.
+4. **Listen by Language** — English, Hindi, Telugu, Kannada, Tamil, Malayalam and Konkani are grouped together after Popular.
+5. **Compact regional lanes** — Indian regional sections intentionally show only one or two strong options so they do not overwhelm the international experience.
+
+The Popular feed excludes obvious news, talk, spoken-word, political, religious and old-time-radio/drama entries. Auralis combines current listening activity, logarithmically weighted directory votes, stream quality, music tags and small boosts for recognizable healthy music brands so years of accumulated directory votes do not dominate the ranking.
+
+Current language ordering:
+
+```text
+English
+Hindi
+Telugu
+Kannada
+Tamil
+Malayalam
+Konkani
+```
+
+For Konkani, Auralis prioritizes **FM Rainbow Goa** when its stream is healthy instead of filling the lane with a non-music station simply because its directory popularity is higher.
+
+Broken or missing station favicons are replaced with generated Auralis monograms rather than browser broken-image icons.
+
+### Loading experience
+
+Backend work now has visible feedback instead of static waiting text:
+
+- shimmer/skeleton cards for trending music
+- skeleton rows for search and discovery
+- skeleton station cards for live radio and language lanes
+- loading-button spinners
+- lazy artwork fade-in
+- reduced-motion support for users who prefer less animation
+
+## Guest personalization
 
 Auralis remains guest-first. No account is required to browse, search or play music.
 
@@ -33,20 +70,6 @@ Auralis remains guest-first. No account is required to browse, search or play mu
 
 Supabase authentication is intentionally a later cloud-sync phase rather than a playback gate.
 
-### Radio Universe
-
-The radio experience is arranged deliberately instead of being one endless list:
-
-1. **India Spotlight** — recognizable Indian stations promoted only when a healthy HTTPS stream is currently available
-2. **India by Language** — Telugu, Kannada, Tamil, Malayalam and Hindi, normally one strong starting station per language
-3. **Country Explorer** — India, USA, UK, France, Germany, UAE, Japan, South Korea, Brazil and Australia
-4. **Popular Worldwide** — the existing international discovery feed remains available
-5. Search and genre tags remain available below the curated layers
-
-Radio Browser requests are ranked with a small Auralis popularity score using current click activity, votes and stream quality. The API proxy supports `top`, `search`, `tag`, `country` and `language` modes.
-
-Broken or missing radio favicons are replaced with an Auralis-generated station monogram rather than a browser broken-image icon.
-
 ## Catalog Universe
 
 ### Discovery
@@ -55,8 +78,8 @@ Broken or missing radio favicons are replaced with an Auralis-generated station 
 - 24 dedicated genre worlds
 - 16 mood-based discovery worlds
 - 8 Essentials / era routes including Timeless Rock, Hip-Hop Canon, 2000s Anthems, Bollywood Route, Indie Classics, Electronic Legends, Jazz Standards and Screen Legends
-- Multi-provider search and de-duplication
-- Expandable Trending shelf
+- multi-provider search and de-duplication
+- expandable Trending shelf
 - `Show more` / `Load more` pagination across search, discovery and radio
 - Collection categories: Discovery, Essentials, Genres, Moods, Focus, Energy and Night
 
@@ -64,7 +87,7 @@ Collections are live search/discovery recipes, not hard-coded copies of commerci
 
 ### Playback
 
-- Full audio player with play/pause, seek, next/previous, volume, shuffle and repeat
+- full audio player with play/pause, seek, next/previous, volume, shuffle and repeat
 - artwork/title/artist block is directly clickable in track lists
 - keyboard-accessible track-list playback targets
 - live-radio aware player state
@@ -76,11 +99,11 @@ Collections are live search/discovery recipes, not hard-coded copies of commerci
 
 ### Product/UI
 
-- Premium responsive desktop/tablet/mobile design
-- existing Auralis hero preserved and expanded
+- premium responsive desktop/tablet/mobile design
 - dedicated Collections, Genres, Moods and Live Radio views
-- Radio Universe visual hierarchy
-- generated radio-logo fallbacks
+- music-first Radio hierarchy
+- generated station-logo fallbacks
+- unified shimmer/loading language
 - provider health/status cards
 - responsive world cards and station cards
 - PWA application-shell cache with network-first navigation
@@ -99,18 +122,18 @@ Collections are live search/discovery recipes, not hard-coded copies of commerci
   full-stream catalog      full-stream catalog            live radio
           │                          │                          │
           └──────────────┬───────────┘                          │
-                         │                                      │
-                normalize + de-dupe                 country/language ranking
-                         │                                      │
-                         └──────────────────┬───────────────────┘
+                         │                           music / language ranking
+                normalize + de-dupe                            │
+                         │                                     │
+                         └──────────────────┬──────────────────┘
                                             │
                                     Auralis Player
                                             │
              ┌──────────────────────────────┼──────────────────────────────┐
              │                              │                              │
-          Search                       Collections                     Radio Universe
+          Search                       Collections                       Radio
              │                              │                              │
-      Load-more paging              Genres + Moods             India + language + world
+      Load-more paging              Genres + Moods          Popular → language lanes
 ```
 
 ### Provider-management layer
@@ -129,11 +152,13 @@ Collections are live search/discovery recipes, not hard-coded copies of commerci
 | --- | --- | --- |
 | Audius | Active | Primary full-stream catalog, search, trending and discovery |
 | Jamendo | Active demo integration | Independent full-track catalog and genre discovery |
-| Radio Browser | Active | Live worldwide radio through `/api/radio` |
+| Radio Browser | Active | Music-first worldwide live radio through `/api/radio` |
 | SoundCloud | Staged | Requires registered app + OAuth credentials before activation |
 | Supabase Project Hub | App #1 boundary registered | Auth, profiles, cloud likes/history and playlists are the backend phase |
 
 The Jamendo adapter currently uses Jamendo's documented read-API test client for this college/demo build. A dedicated Jamendo developer `client_id` should be configured before treating the app as a production service.
+
+Auralis does **not** label metadata-only or short-preview services as full music providers. A future provider is promoted into the primary player only when its terms and integration provide a clean, legitimate playback path.
 
 ## Project structure
 
@@ -142,7 +167,7 @@ auralis-music/
 ├── AGENTS.md
 ├── SUPABASE_HUB_RULES.md
 ├── api/
-│   └── radio.js                  # Radio Browser proxy + mirror/ranking logic
+│   └── radio.js                  # Radio Browser proxy + music-first ranking
 ├── assets/
 │   ├── covers/
 │   └── icon.svg
@@ -153,9 +178,9 @@ auralis-music/
 │   │   ├── radio-browser.js
 │   │   └── catalog-manager.js
 │   ├── app-v3.js                # Catalog Universe controller
-│   ├── row-play-targets.js      # clickable rows + v4 guest/radio enhancements
+│   ├── row-play-targets.js      # guest profile, play targets, Radio v5 enhancements
 │   ├── app-v2.js                # previous release retained for rollback
-│   ├── library-map.js           # genre + mood taxonomy
+│   ├── library-map.js
 │   ├── collections.js           # 44 dynamic collection definitions
 │   ├── store.js
 │   └── fallback.js
@@ -169,6 +194,7 @@ auralis-music/
 ├── experience.css
 ├── experience-v3.css
 ├── experience-v4.css
+├── experience-v5.css
 ├── manifest.webmanifest
 ├── sw.js
 └── vercel.json
@@ -248,17 +274,18 @@ The built-in fallback audio is synthesized in-browser and is not copied from a c
 ## Roadmap
 
 - Supabase authentication and optional cloud-synced library UI
-- Account-backed playlists
-- Cloud liked songs and listening history
-- Artist and album detail pages
+- account-backed playlists
+- cloud liked songs and listening history
+- artist and album detail pages
 - SoundCloud adapter after credential approval
-- Optional MusicBrainz metadata enrichment
-- Better cross-provider entity matching
-- Personalized recommendation engine
-- Collaborative playlists
-- Lyrics integration where licensing permits
-- Shareable listening rooms
-- Listening statistics
+- optional MusicBrainz metadata enrichment
+- additional legitimate full-track catalog adapters
+- better cross-provider entity matching
+- personalized recommendation engine
+- collaborative playlists
+- lyrics integration where licensing permits
+- shareable listening rooms
+- listening statistics
 
 ## License
 
