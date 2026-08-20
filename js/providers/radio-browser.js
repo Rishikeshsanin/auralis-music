@@ -1,14 +1,21 @@
 import '../radio-reliability-v6.js';
+import '../auralis-experience-v7.js';
+import '../konkani-radio-v7.js';
 
 const ENDPOINT = '/api/radio';
 
-if (!document.querySelector('link[data-auralis-radio-v6]')) {
+[
+  ['auralisRadioV6', './experience-v6.css'],
+  ['auralisExperienceV7', './experience-v7.css'],
+  ['auralisAuraSurfaceV7', './experience-v7-aura.css']
+].forEach(([key, href]) => {
+  if (document.querySelector(`link[data-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}]`)) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = './experience-v6.css';
-  link.dataset.auralisRadioV6 = 'true';
+  link.href = href;
+  link.dataset[key] = 'true';
   document.head.append(link);
-}
+});
 
 function normalize(station) {
   const tags = String(station.tags || '').split(',').map(tag => tag.trim()).filter(Boolean);

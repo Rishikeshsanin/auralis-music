@@ -31,6 +31,8 @@ jobs:
           node --check js/app-v3.js
           node --check js/row-play-targets.js
           node --check js/radio-reliability-v6.js
+          node --check js/auralis-experience-v7.js
+          node --check js/konkani-radio-v7.js
           node --check js/app-v2.js
           node --check js/collections.js
           node --check js/library-map.js
@@ -44,3 +46,4 @@ jobs:
         run: |
           python tests/smoke.py
           python tests/radio_v6.py
+          python tests/experience_v7.py

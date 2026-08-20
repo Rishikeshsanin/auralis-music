@@ -3,8 +3,8 @@ import re, json
 
 root = Path(__file__).resolve().parents[1]
 required = [
-    'index.html','styles.css','fixes.css','experience.css','experience-v3.css','experience-v4.css','experience-v5.css','experience-v6.css',
-    'js/app-v3.js','js/row-play-targets.js','js/radio-reliability-v6.js','js/app-v2.js','js/store.js','js/fallback.js','js/collections.js','js/library-map.js',
+    'index.html','styles.css','fixes.css','experience.css','experience-v3.css','experience-v4.css','experience-v5.css','experience-v6.css','experience-v7.css',
+    'js/app-v3.js','js/row-play-targets.js','js/radio-reliability-v6.js','js/auralis-experience-v7.js','js/app-v2.js','js/store.js','js/fallback.js','js/collections.js','js/library-map.js',
     'js/providers/audius.js','js/providers/jamendo.js','js/providers/radio-browser.js',
     'js/providers/catalog-manager.js','api/radio.js',
     'manifest.webmanifest','sw.js','vercel.json','AGENTS.md','SUPABASE_HUB_RULES.md'
@@ -31,8 +31,10 @@ manager = (root / 'js/providers/catalog-manager.js').read_text()
 radio_api = (root / 'api/radio.js').read_text()
 enhancements = (root / 'js/row-play-targets.js').read_text()
 radio_v6 = (root / 'js/radio-reliability-v6.js').read_text()
+experience_v7 = (root / 'js/auralis-experience-v7.js').read_text()
 v5_css = (root / 'experience-v5.css').read_text()
 v6_css = (root / 'experience-v6.css').read_text()
+v7_css = (root / 'experience-v7.css').read_text()
 sw = (root / 'sw.js').read_text()
 
 assert collections.count("id:'") >= 44, 'expected at least 44 curated collections'
@@ -60,7 +62,7 @@ assert 'crossorigin="anonymous"' not in html, 'audio element must not force CORS
 assert 'AGENTS.md' in (root / 'SUPABASE_HUB_RULES.md').read_text(), 'Project Hub repo safety contract incomplete'
 assert 'auralis:guest-profile:v1' in enhancements, 'local guest profile missing'
 assert "label: 'English'" in enhancements and "label: 'Hindi'" in enhancements, 'language-first radio ordering missing'
-assert "label: 'Konkani'" in enhancements and 'FM Rainbow Goa' in enhancements, 'Konkani radio lane missing'
+assert "label: 'Konkani'" in enhancements, 'Konkani radio lane missing'
 assert 'radioPopularBlockV5' in enhancements and 'radioLanguagesV5' in enhancements, 'radio v5 structure missing'
 assert 'auralis-loading-grid' in enhancements and 'LOADING_WORDS' in enhancements, 'loading-state enhancer missing'
 assert 'experience-v5.css' in enhancements, 'v5 stylesheet loader missing'
@@ -69,11 +71,13 @@ assert '#radioPopularBlockV5 { order: 0; }' in v5_css, 'popular radio baseline o
 assert 'radioActiveBlockV6' in radio_v6 and 'radioPopularGridV6' in radio_v6, 'v6 persistent radio shelves missing'
 assert 'cdn.jsdelivr.net/npm/hls.js@1' in radio_v6, 'HLS engine missing'
 assert '#radioActiveBlockV6 { order:-1; }' in v6_css and '#radioPopularBlockV5 { order:0; }' in v6_css, 'v6 selected/popular ordering incorrect'
-assert "auralis-shell-v10" in sw and 'experience-v6.css' in sw and 'radio-reliability-v6.js' in sw, 'PWA v10 radio shell missing'
+assert 'Aura Mode' in experience_v7 and 'AmchiKONKANI' in experience_v7, 'v7 Aura/Konkani enhancements missing'
+assert '.auralis-player-loading' in v7_css and '#radioTuningV7 { order:-2; }' in v7_css, 'v7 player/radio loading styling missing'
+assert "auralis-shell-v11" in sw and 'experience-v7.css' in sw and 'auralis-experience-v7.js' in sw, 'PWA v11 experience shell missing'
 
 manifest = json.loads((root / 'manifest.webmanifest').read_text())
 assert manifest['name'] == 'Auralis Music'
 vercel = json.loads((root / 'vercel.json').read_text())
 assert 'headers' in vercel
 
-print('Auralis Radio Reliability v6 smoke tests passed')
+print('Auralis Experience v7 smoke tests passed')

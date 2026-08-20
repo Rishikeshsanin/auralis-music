@@ -1,0 +1,66 @@
+/* Aura Mode surface integration — loaded after experience-v7.css */
+html.aura-mode-on .sidebar,
+html.aura-mode-on .topbar,
+html.aura-mode-on .player {
+  border-color:rgba(var(--aura-rgb),.09);
+  transition:border-color .8s ease,background .8s ease,box-shadow .8s ease;
+}
+html.aura-mode-on .topbar {
+  background:linear-gradient(180deg,rgba(var(--aura-rgb),.035),rgba(8,9,13,.91));
+}
+html.aura-mode-on .sidebar {
+  background:linear-gradient(180deg,rgba(var(--aura-rgb),.028),rgba(8,9,13,.97) 22%);
+}
+html.aura-mode-on .player {
+  background:
+    radial-gradient(circle at 17% 0%,rgba(var(--aura-rgb),.055),transparent 28%),
+    rgba(8,9,13,.965);
+  box-shadow:0 -16px 54px rgba(var(--aura-rgb),.035),0 -12px 40px rgba(0,0,0,.2);
+}
+html.aura-mode-on .nav-item.active,
+html.aura-mode-on .mobile-nav button.active {
+  color:#fff;
+  border-color:rgba(var(--aura-rgb),.2);
+  background:linear-gradient(100deg,rgba(var(--aura-rgb),.13),rgba(255,255,255,.025));
+  box-shadow:inset 2px 0 0 var(--aura-primary),0 8px 26px rgba(var(--aura-rgb),.045);
+}
+html.aura-mode-on .catalog-live-pill i,
+html.aura-mode-on .live-dot,
+html.aura-mode-on .live-label,
+html.aura-mode-on .v5-live {
+  box-shadow:0 0 14px rgba(var(--aura-rgb),.35);
+}
+html.aura-mode-on .music-card.active,
+html.aura-mode-on .track-row.active,
+html.aura-mode-on .radio-card.active {
+  border-color:rgba(var(--aura-rgb),.24);
+  background:linear-gradient(100deg,rgba(var(--aura-rgb),.09),rgba(255,255,255,.025));
+  box-shadow:0 12px 34px rgba(var(--aura-rgb),.055);
+}
+html.aura-mode-on .collection-card:hover,
+html.aura-mode-on .world-card:hover,
+html.aura-mode-on .essential-route:hover,
+html.aura-mode-on .v5-language-station:hover,
+html.aura-mode-on .radio-card:hover {
+  border-color:rgba(var(--aura-rgb),.2);
+  box-shadow:0 16px 42px rgba(var(--aura-rgb),.055);
+}
+html.aura-mode-on .primary-button {
+  box-shadow:0 8px 30px rgba(var(--aura-rgb),.08);
+}
+html.aura-mode-on input[type="range"] {
+  accent-color:var(--aura-primary);
+}
+html.aura-mode-on ::selection {
+  background:rgba(var(--aura-rgb),.32);
+  color:#fff;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  html.aura-mode-on .sidebar,
+  html.aura-mode-on .topbar,
+  html.aura-mode-on .player,
+  html.aura-mode-on .music-card.active,
+  html.aura-mode-on .track-row.active,
+  html.aura-mode-on .radio-card.active { transition:none; }
+}
