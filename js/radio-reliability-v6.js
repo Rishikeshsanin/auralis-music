@@ -177,7 +177,7 @@
   }
 
   function skeleton(count = 9) {
-    return Array.from({ length: count }, () => `<div class="auralis-skeleton-card"><span class="auralis-skeleton-block media"></span><span class="auralis-skeleton-copy"><i></i><span class="auralis-skeleton-copy"><i></i><i></i></span></div>`).join('');
+    return Array.from({ length: count }, () => `<div class="auralis-skeleton-card"><span class="auralis-skeleton-block media"></span><span class="auralis-skeleton-copy"><i></i><i></i><i></i></span></div>`).join('');
   }
 
   function waitForRadioLayout(timeout = 5000) {
