@@ -1,6 +1,6 @@
 # Auralis 🎧
 
-> A polished, responsive multi-catalog music experience with real discovery, full-track playback, dynamic collections, queueing, likes, history, and a premium Spotify-inspired interface.
+> A polished, responsive multi-catalog music discovery platform with full-track catalogs, live radio, expandable provider adapters, dynamic collections, genre/mood worlds, queueing, likes, history, and a premium interface.
 
 [![Smoke Test](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml/badge.svg)](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml)
 [![Live on Vercel](https://img.shields.io/badge/Live-Vercel-000000?logo=vercel)](https://auralis-music-lime.vercel.app)
@@ -10,82 +10,120 @@
 
 ## Why Auralis
 
-Auralis is not a static Spotify mockup. It normalizes playable tracks from programmable music catalogs into one player and one discovery experience. Audius is the primary open-streaming backbone and Jamendo adds an independent full-track catalog. The provider layer stays modular so future credentialed providers can be added without rebuilding the player or library model.
+Auralis is not a static Spotify mockup. It has a provider-management layer that normalizes several types of audio sources into one player and one discovery experience.
 
-## Highlights
+- **Audius** is the primary open full-stream music backbone.
+- **Jamendo** adds an independent full-track catalog.
+- **Radio Browser** adds live worldwide radio through a small same-origin Vercel API proxy.
+- Future credentialed providers can be added as adapters without rewriting the player, queue or browse system.
 
-- Multi-catalog search across Audius + Jamendo with basic de-duplication
-- 16 dynamic Auralis Collections, including Fresh Drops, Under the Radar, Remix Radar, Night Drive, Deep Focus, Jazz Room and Classical Space
-- Expanded Audius discovery endpoints: trending, new releases, most-loved, remixables, under-the-radar and recommendations with search fallbacks
-- Jamendo full-track streaming adapter for independent music discovery
+The product is built around discovery rather than copying Spotify's exact information architecture: **36 dynamic collections, 24 genre worlds, 16 mood worlds, live radio, expandable shelves and one unified player.**
+
+## Catalog Universe v3
+
+### Discovery
+
+- 36 dynamic Auralis Collections
+- 24 dedicated genre worlds
+- 16 mood-based discovery worlds
+- Multi-provider search and de-duplication
+- Expandable Trending shelf
+- `Show more` / `Load more` pagination across search, discovery and radio
+- Collection categories: Discovery, Genres, Moods, Focus, Energy and Night
+- Live worldwide radio search and genre tags
+
+### Playback
+
 - Full audio player with play/pause, seek, next/previous, volume, shuffle and repeat
+- Live-radio aware player state
+- Automatic stream failure detection and queue failover
+- Provider/source badges
 - Queue drawer with removal and clear actions
-- Provider/source badges throughout the player and track lists
-- Liked songs and recently played history persisted locally
-- Mood and genre discovery flows
-- Media Session API support for browser/OS media controls
-- Responsive desktop, tablet and mobile layouts
-- Dedicated Collections view and multi-provider catalog status UI
-- PWA manifest and offline application-shell caching
-- Graceful provider fallback with original synthesized demo audio
-- Vercel security headers and clean URLs
-- GitHub Actions with JavaScript syntax checks + smoke tests on pull requests
-- Shared Supabase Project Hub safety contract committed in `AGENTS.md` and `SUPABASE_HUB_RULES.md`
+- Media Session API support
+- Liked items and recently played history persisted locally
+
+### Product/UI
+
+- Premium responsive desktop/tablet/mobile design
+- Existing Auralis hero preserved and expanded
+- Dedicated Collections, Genres, Moods and Live Radio views
+- Provider health/status cards
+- Responsive world cards and radio station cards
+- PWA application-shell cache with network-first navigation
+- Offline/demo fallback audio
 
 ## Architecture
 
 ```text
-                               AURALIS
-                                  │
-                         Unified Catalog Layer
-                                  │
-                  ┌───────────────┴───────────────┐
-                  │                               │
-               Audius                         Jamendo
-        open full-stream catalog      independent full-track catalog
-                  │                               │
-                  └───────────────┬───────────────┘
-                                  │
-                      Normalize + de-duplicate
-                                  │
-                 ┌────────────────┼────────────────┐
-                 │                │                │
-              Search         Collections        Player
-                                                   │
-                                             Queue / Likes
-                                                   │
-                                      Local store → Supabase next
+                                  AURALIS
+                                     │
+                            Catalog Manager
+                                     │
+          ┌──────────────────────────┼──────────────────────────┐
+          │                          │                          │
+       Audius                    Jamendo                 Radio Browser
+  full-stream catalog      full-stream catalog            live radio
+          │                          │                          │
+          └──────────────┬───────────┘                          │
+                         │                                      │
+                normalize + de-dupe                       live normalize
+                         │                                      │
+                         └──────────────────┬───────────────────┘
+                                            │
+                                    Auralis Player
+                                            │
+                  ┌─────────────────────────┼─────────────────────────┐
+                  │                         │                         │
+               Search                  Collections               Queue/Library
+                  │                         │
+           Load more paging        Genres + Moods
 ```
 
-### Provider strategy
+### Provider-management layer
+
+`js/providers/catalog-manager.js` is the central provider coordinator. It:
+
+- registers active provider adapters
+- tracks provider health
+- runs providers concurrently
+- normalizes pagination
+- interleaves results
+- de-duplicates obvious cross-catalog duplicates
+- keeps track-search providers separate from live-radio sources
 
 | Provider | Status | Role |
 | --- | --- | --- |
-| Audius | Active | Primary full-stream catalog, search and discovery |
-| Jamendo | Active demo integration | Independent full-track catalog and genre collections |
+| Audius | Active | Primary full-stream catalog, search, trending and discovery |
+| Jamendo | Active demo integration | Independent full-track catalog and genre discovery |
+| Radio Browser | Active | Live worldwide radio through `/api/radio` |
 | SoundCloud | Staged | Requires registered app + OAuth credentials before activation |
-| Supabase Project Hub | Backend staged | Auth, profiles, cloud likes/history and playlists |
+| Supabase Project Hub | App #1 boundary registered | Auth, profiles, cloud likes/history and playlists are the backend phase |
 
-The Jamendo adapter currently uses Jamendo's documented read-API test client for this college/demo build. Before treating Auralis as a production service, configure a dedicated Jamendo developer `client_id`.
+The Jamendo adapter currently uses Jamendo's documented read-API test client for this college/demo build. A dedicated Jamendo developer `client_id` should be configured before treating the app as a production service.
 
 ## Project structure
 
 ```text
 auralis-music/
-├── AGENTS.md                    # AI/agent boundary for shared Supabase Hub
-├── SUPABASE_HUB_RULES.md        # Project Hub isolation rules
+├── AGENTS.md
+├── SUPABASE_HUB_RULES.md
+├── api/
+│   └── radio.js                  # Radio Browser proxy + mirror failover
 ├── assets/
 │   ├── covers/
 │   └── icon.svg
 ├── js/
 │   ├── providers/
-│   │   ├── audius.js            # Audius adapter + discovery endpoints
-│   │   └── jamendo.js           # Jamendo full-track adapter
-│   ├── app-v2.js                # Multi-catalog player/search/UI controller
-│   ├── collections.js           # Dynamic collection definitions
-│   ├── app.js                   # Previous v1 controller retained for rollback
-│   ├── fallback.js              # Built-in fallback catalog
-│   └── store.js                 # Local likes/history state
+│   │   ├── audius.js
+│   │   ├── jamendo.js
+│   │   ├── radio-browser.js
+│   │   └── catalog-manager.js
+│   ├── app-v3.js                # Catalog Universe controller
+│   ├── app-v2.js                # previous release retained for rollback
+│   ├── library-map.js           # genre + mood taxonomy
+│   ├── collections.js           # 36 dynamic collection definitions
+│   ├── store.js
+│   └── fallback.js
 ├── tests/
 │   └── smoke.py
 ├── .github/workflows/
@@ -94,6 +132,7 @@ auralis-music/
 ├── styles.css
 ├── fixes.css
 ├── experience.css
+├── experience-v3.css
 ├── manifest.webmanifest
 ├── sw.js
 └── vercel.json
@@ -101,7 +140,7 @@ auralis-music/
 
 ## Run locally
 
-No build step is required.
+No build step is required for the frontend.
 
 ```bash
 python -m http.server 4173
@@ -109,7 +148,7 @@ python -m http.server 4173
 
 Then open `http://localhost:4173`.
 
-> Do not open `index.html` directly with `file://`; ES modules and service workers require HTTP(S).
+> The live-radio Vercel function is only available on Vercel unless you run the project with Vercel's local runtime.
 
 ## Keyboard controls
 
@@ -117,18 +156,20 @@ Then open `http://localhost:4173`.
 | --- | --- |
 | `/` | Focus search |
 | `Space` | Play / pause |
-| `Alt + →` | Next track |
-| `Alt + ←` | Previous track |
+| `Alt + →` | Next item |
+| `Alt + ←` | Previous item |
 
 ## Validation
 
-Run:
-
 ```bash
-node --check js/app-v2.js
+node --check js/app-v3.js
 node --check js/collections.js
+node --check js/library-map.js
 node --check js/providers/audius.js
 node --check js/providers/jamendo.js
+node --check js/providers/radio-browser.js
+node --check js/providers/catalog-manager.js
+node --check api/radio.js
 python tests/smoke.py
 ```
 
@@ -136,35 +177,49 @@ GitHub Actions runs these checks automatically on pull requests and `main` pushe
 
 ## Deployment
 
-Auralis deploys directly to Vercel. The GitHub repository is connected to the Vercel project: pushes to `main` trigger production deployments while branches and pull requests create preview deployments.
+Auralis deploys directly to Vercel. `main` triggers production while branches and pull requests create preview deployments.
 
 Production: **https://auralis-music-lime.vercel.app**
 
 ## Supabase Project Hub boundary
 
-Auralis will use the shared Supabase `Project Hub` as **App #1**, with an assigned application schema of `auralis`.
+Auralis is registered as **App #1** in the shared Supabase `Project Hub`, with the isolated schema:
 
-Before any database write, agents must read `AGENTS.md` and `SUPABASE_HUB_RULES.md`. Auralis must never modify another application's schema or shared Hub infrastructure unless the user explicitly approves that exact cross-project change.
+```text
+auralis.*
+```
+
+Before any database write, agents must read `AGENTS.md`, `SUPABASE_HUB_RULES.md` and `hub.read_me_first`, then pass:
+
+```sql
+select hub.assert_app_scope('auralis', 'auralis');
+```
+
+Auralis must never modify another application's schema or shared Hub infrastructure unless the user explicitly approves that exact cross-project change.
 
 ## Music & rights
 
-Auralis does not scrape, download or re-host commercial recordings. Playback is requested from provider streams that those providers expose for off-platform use. Availability can still change based on creator permissions, geography, catalog rules or provider policies. The built-in fallback audio is synthesized in-browser and is not copied from a commercial recording.
+Auralis does not scrape, download or re-host commercial recordings. Playback is requested from provider streams those providers expose for off-platform use. Availability can change based on creator permissions, geography, catalog rules or provider policies.
+
+Live radio is resolved from Radio Browser's open station directory. Individual station streams remain controlled by their station operators.
+
+The built-in fallback audio is synthesized in-browser and is not copied from a commercial recording.
 
 ## Roadmap
 
-- Register Auralis as App #1 in Supabase Project Hub
-- Supabase authentication and cloud-synced libraries
+- Supabase authentication and cloud-synced library UI
 - Account-backed playlists
 - Cloud liked songs and listening history
 - Artist and album detail pages
-- SoundCloud provider after credential setup
-- Better provider ranking and de-duplication
+- SoundCloud adapter after credential approval
+- Optional MusicBrainz metadata enrichment
+- Better cross-provider entity matching
+- Personalized recommendation engine
 - Collaborative playlists
-- Recommendation engine based on listening history
 - Lyrics integration where licensing permits
 - Shareable listening rooms
-- Listening statistics and personalized discovery
+- Listening statistics
 
 ## License
 
-The Auralis application source code is released under the [MIT License](LICENSE). Third-party music and metadata remain subject to their respective provider and creator terms.
+The Auralis application source code is released under the [MIT License](LICENSE). Third-party music, station streams and metadata remain subject to their respective provider/operator terms.
