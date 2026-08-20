@@ -29,6 +29,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check js/app-v3.js
+          node --check js/row-play-targets.js
           node --check js/app-v2.js
           node --check js/collections.js
           node --check js/library-map.js

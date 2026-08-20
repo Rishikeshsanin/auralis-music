@@ -1,7 +1,7 @@
-const CACHE='auralis-shell-v5';
+const CACHE='auralis-shell-v6';
 const SHELL=[
   './','./index.html','./styles.css','./fixes.css','./experience.css','./experience-v3.css',
-  './js/app-v3.js','./js/store.js','./js/fallback.js','./js/collections.js','./js/library-map.js',
+  './js/app-v3.js','./js/row-play-targets.js','./js/store.js','./js/fallback.js','./js/collections.js','./js/library-map.js',
   './js/providers/audius.js','./js/providers/jamendo.js','./js/providers/radio-browser.js',
   './js/providers/catalog-manager.js','./assets/icon.svg'
 ];
