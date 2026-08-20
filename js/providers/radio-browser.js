@@ -1,5 +1,6 @@
 import '../radio-reliability-v6.js';
 import '../auralis-experience-v7.js';
+import '../konkani-radio-v7.js';
 
 const ENDPOINT = '/api/radio';
 
