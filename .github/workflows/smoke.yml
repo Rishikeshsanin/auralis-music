@@ -28,10 +28,15 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
+          node --check js/app-v3.js
           node --check js/app-v2.js
           node --check js/collections.js
+          node --check js/library-map.js
           node --check js/providers/audius.js
           node --check js/providers/jamendo.js
+          node --check js/providers/radio-browser.js
+          node --check js/providers/catalog-manager.js
+          node --check api/radio.js
 
       - name: Run Auralis smoke tests
         run: python tests/smoke.py
