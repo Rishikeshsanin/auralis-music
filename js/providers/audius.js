@@ -28,6 +28,7 @@ function normalize(track) {
     playCount: Number(track.play_count ?? track.playCount ?? 0),
     permalink: track.permalink || '',
     isStreamable: streamableValue(track),
+    isLive: false,
     streamUrl: `${BASE}/tracks/${encodeURIComponent(track.id)}/stream?app_name=${APP_NAME}`
   };
 }
@@ -45,42 +46,38 @@ async function request(path, params = {}) {
   return data.map(normalize).filter(track => track.isStreamable && track.streamUrl);
 }
 
-async function endpointOrSearch(path, searchQuery, limit = 30, params = {}) {
+async function endpointOrSearch(path, searchQuery, limit = 30, offset = 0, params = {}) {
   try {
-    const tracks = await request(path, { ...params, limit });
+    const tracks = await request(path, { ...params, limit, offset });
     if (tracks.length) return tracks;
   } catch {}
-  return request('/tracks/search', { query: searchQuery, limit, sort_method: 'popular' });
+  return request('/tracks/search', { query: searchQuery, limit, offset, sort_method: 'popular' });
 }
 
 export const audiusProvider = {
+  id: 'audius',
   name: 'Audius',
-  async trending(limit = 20, time = 'week') {
-    return request('/tracks/trending', { time, limit });
+  kind: 'tracks',
+  capabilities: ['search','trending','collections','full-stream','pagination'],
+
+  async trending(limit = 20, time = 'week', offset = 0) {
+    return request('/tracks/trending', { time, limit, offset });
   },
-  async search(query, limit = 30) {
+
+  async trendingByGenre(genre, limit = 30, offset = 0) {
+    return request('/tracks/trending', { genre, time: 'week', limit, offset });
+  },
+
+  async search(query, limit = 30, offset = 0) {
     if (!query?.trim()) return [];
-    return request('/tracks/search', { query: query.trim(), limit, sort_method: 'relevant' });
+    return request('/tracks/search', { query: query.trim(), limit, offset, sort_method: 'relevant' });
   },
-  async latest(limit = 30) {
-    return endpointOrSearch('/tracks/latest', 'new releases', limit);
-  },
-  async bestNewReleases(limit = 30) {
-    return endpointOrSearch('/tracks/best_new_releases', 'best new releases', limit);
-  },
-  async mostLoved(limit = 30) {
-    return endpointOrSearch('/tracks/most_loved', 'popular', limit);
-  },
-  async underTheRadar(limit = 30) {
-    return endpointOrSearch('/tracks/under_the_radar', 'underground indie', limit);
-  },
-  async remixables(limit = 30) {
-    return endpointOrSearch('/tracks/remixables', 'remix', limit);
-  },
-  async recommended(limit = 30) {
-    return endpointOrSearch('/tracks/recommended', 'recommended', limit);
-  },
-  async feelingLucky(limit = 30) {
-    return endpointOrSearch('/tracks/feeling-lucky', 'discover', limit);
-  }
+
+  async latest(limit = 30, offset = 0) { return endpointOrSearch('/tracks/latest', 'new releases', limit, offset); },
+  async bestNewReleases(limit = 30, offset = 0) { return endpointOrSearch('/tracks/best_new_releases', 'best new releases', limit, offset); },
+  async mostLoved(limit = 30, offset = 0) { return endpointOrSearch('/tracks/most_loved', 'popular', limit, offset); },
+  async underTheRadar(limit = 30, offset = 0) { return endpointOrSearch('/tracks/under_the_radar', 'underground indie', limit, offset); },
+  async remixables(limit = 30, offset = 0) { return endpointOrSearch('/tracks/remixables', 'remix', limit, offset); },
+  async recommended(limit = 30, offset = 0) { return endpointOrSearch('/tracks/recommended', 'recommended', limit, offset); },
+  async feelingLucky(limit = 30, offset = 0) { return endpointOrSearch('/tracks/feeling-lucky', 'discover', limit, offset); }
 };
