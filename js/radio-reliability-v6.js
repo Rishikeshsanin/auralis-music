@@ -45,7 +45,11 @@
     let internalMutation = false;
     let fatalForwarded = false;
 
-    const isHls = value => /\.m3u8(?:$|\?)/i.test(String(value || ''));
+    const isHls = value => {
+      const source = String(value || '');
+      return /\.m3u8(?:$|[?#])/i.test(source) || /#auralis-hls$/i.test(source);
+    };
+    const cleanHlsUrl = value => String(value || '').replace(/#auralis-hls$/i, '');
 
     function destroyHls() {
       pending = null;
@@ -58,9 +62,10 @@
     }
 
     function attachHls(url) {
+      const sourceUrl = cleanHlsUrl(url);
       pending = loadHlsLibrary().then(Hls => {
         if (!Hls?.isSupported?.()) {
-          descriptor.set.call(audio, url);
+          descriptor.set.call(audio, sourceUrl);
           return;
         }
         return new Promise((resolve, reject) => {
@@ -75,7 +80,7 @@
             manifestLoadingTimeOut: 7000,
             fragLoadingTimeOut: 9000
           });
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => hls?.loadSource(url));
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => hls?.loadSource(sourceUrl));
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             ready = true;
             audio.dataset.radioStreamEngine = 'hls.js';
@@ -172,7 +177,7 @@
   }
 
   function skeleton(count = 9) {
-    return Array.from({ length: count }, () => `<div class="auralis-skeleton-card"><span class="auralis-skeleton-block media"></span><span class="auralis-skeleton-copy"><i></i><i></i><i></i></span></div>`).join('');
+    return Array.from({ length: count }, () => `<div class="auralis-skeleton-card"><span class="auralis-skeleton-block media"></span><span class="auralis-skeleton-copy"><i></i><span class="auralis-skeleton-copy"><i></i><i></i></span></div>`).join('');
   }
 
   function waitForRadioLayout(timeout = 5000) {
