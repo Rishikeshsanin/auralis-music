@@ -34,7 +34,16 @@ export const collections = [
   { id:'dreamy-pop', title:'Dreamy Pop', subtitle:'Soft-focus hooks and bright haze', icon:'✧', accent:'pink', category:'mood', source:'search', query:'dream pop indie pop' },
   { id:'rainy-day', title:'Rainy Day', subtitle:'Quiet songs for grey windows', icon:'☂', accent:'sky', category:'mood', source:'search', query:'rainy day mellow acoustic' },
   { id:'euphoric', title:'Euphoric', subtitle:'Hands-up moments and pure lift', icon:'✷', accent:'violet', category:'mood', source:'search', query:'euphoric uplifting dance' },
-  { id:'calm-down', title:'Calm Down', subtitle:'Slow the room without going silent', icon:'≈', accent:'mint', category:'mood', source:'search', query:'calm relaxing ambient' }
+  { id:'calm-down', title:'Calm Down', subtitle:'Slow the room without going silent', icon:'≈', accent:'mint', category:'mood', source:'search', query:'calm relaxing ambient' },
+
+  { id:'timeless-rock', title:'Timeless Rock', subtitle:'Big riffs, classic energy and evergreen songwriting', icon:'★', accent:'red', category:'essentials', source:'search', query:'classic rock greatest hits timeless' },
+  { id:'hip-hop-canon', title:'Hip-Hop Canon', subtitle:'Foundational beats, lyrical craft and era-defining energy', icon:'◆', accent:'orange', category:'essentials', source:'search', query:'classic hip hop greatest tracks old school' },
+  { id:'2000s-anthems', title:'2000s Anthems', subtitle:'Y2K hooks, alt-rock, pop and electronic nostalgia', icon:'00', accent:'cyan', category:'essentials', source:'search', query:'2000s anthems pop rock electronic' },
+  { id:'bollywood-essentials', title:'Bollywood Route', subtitle:'Auralis searches its active catalogs for Hindi film energy', icon:'✦', accent:'rose', category:'essentials', source:'search', query:'bollywood hindi film music indian' },
+  { id:'indie-classics', title:'Indie Classics', subtitle:'Influential alternative textures and cult-favorite energy', icon:'◇', accent:'pink', category:'essentials', source:'search', query:'indie classics alternative greatest' },
+  { id:'electronic-legends', title:'Electronic Legends', subtitle:'House, techno, trance and landmark club sounds', icon:'⌁', accent:'violet', category:'essentials', source:'search', query:'classic electronic house techno trance greatest' },
+  { id:'jazz-standards', title:'Jazz Standards', subtitle:'Timeless forms, swing, piano and late-night improvisation', icon:'♬', accent:'gold', category:'essentials', source:'search', query:'jazz standards classic jazz' },
+  { id:'screen-legends', title:'Screen Legends', subtitle:'Cinematic themes, scores and soundtrack-scale moments', icon:'▣', accent:'teal', category:'essentials', source:'search', query:'iconic film score soundtrack cinematic' }
 ];
 
 export const featuredCollectionIds = ['fresh-drops','underground','night-drive','deep-focus','hip-hop-heat','jazz-room','workout-charge','dreamy-pop'];
@@ -42,6 +51,7 @@ export const featuredCollectionIds = ['fresh-drops','underground','night-drive',
 export const collectionCategories = [
   { id:'all', label:'All' },
   { id:'discovery', label:'Discovery' },
+  { id:'essentials', label:'Essentials' },
   { id:'genre', label:'Genres' },
   { id:'mood', label:'Moods' },
   { id:'focus', label:'Focus' },
