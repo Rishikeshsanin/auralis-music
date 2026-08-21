@@ -33,6 +33,7 @@ jobs:
           node --check js/radio-reliability-v6.js
           node --check js/auralis-experience-v7.js
           node --check js/konkani-radio-v7.js
+          node --check js/music-graph-v9.js
           node --check js/app-v2.js
           node --check js/collections.js
           node --check js/library-map.js
@@ -41,9 +42,13 @@ jobs:
           node --check js/providers/radio-browser.js
           node --check js/providers/catalog-manager.js
           node --check api/radio.js
+          node --check api/catalog.js
+          node --check api/providers.js
+          node --check api/youtube.js
 
-      - name: Run Auralis smoke tests
+      - name: Run Auralis regression suites
         run: |
           python tests/smoke.py
           python tests/radio_v6.py
           python tests/experience_v7.py
+          python tests/music_graph_v9.py
