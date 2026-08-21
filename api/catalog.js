@@ -190,15 +190,29 @@ function musicBrainzTrack(recording) {
 }
 
 function matchScore(item, mb) {
-  let score = 0;
   const t1 = clean(item.title);
   const t2 = clean(mb.title);
   const a1 = clean(item.artist);
   const a2 = clean(mb.artist);
-  if (t1 && t2 && t1 === t2) score += 8;
-  else if (t1 && t2 && (t1.includes(t2) || t2.includes(t1))) score += 4;
-  if (a1 && a2 && a1 === a2) score += 8;
-  else if (a1 && a2 && (a1.includes(a2) || a2.includes(a1))) score += 3;
+
+  const titleExact = Boolean(t1 && t2 && t1 === t2);
+  const titlePartial = Boolean(t1 && t2 && (t1.includes(t2) || t2.includes(t1)));
+  const artistExact = Boolean(a1 && a2 && a1 === a2);
+  const artistPartial = Boolean(a1 && a2 && (a1.includes(a2) || a2.includes(a1)));
+  const titleMatched = titleExact || titlePartial;
+  const artistMatched = artistExact || artistPartial;
+
+  // An exact title alone is unsafe: covers/remixes by unrelated artists are common.
+  if (!titleMatched || !artistMatched) return 0;
+
+  let score = (titleExact ? 8 : 4) + (artistExact ? 8 : 3);
+  const itemDuration = Number(item.duration || 0);
+  const mbDuration = Number(mb.length || 0) / 1000;
+  if (itemDuration && mbDuration) {
+    const delta = Math.abs(itemDuration - mbDuration);
+    if (delta <= 4) score += 4;
+    else if (delta <= 12) score += 2;
+  }
   return score;
 }
 
@@ -209,7 +223,7 @@ function attachMusicBrainz(items, recordings) {
     const best = mb
       .map(candidate => ({ candidate, score: matchScore(item, candidate) }))
       .sort((a, b) => b.score - a.score)[0];
-    if (!best || best.score < 8) return item;
+    if (!best || best.score < 7) return item;
     const candidate = best.candidate;
     return {
       ...item,
