@@ -57,6 +57,8 @@ assert 'attachMusicBrainz' in catalog and 'isrc' in catalog.lower(), 'Canonical 
 assert 'coverartarchive.org/release-group/' in catalog, 'Cover Art Archive fallback missing'
 assert "mode === 'album'" in catalog and "mode === 'artist'" in catalog and "mode === 'chart'" in catalog, 'Catalog entity routes missing'
 assert "playback: 'preview'" in catalog or "item.preview ? 'preview'" in catalog, 'Preview availability not represented'
+assert 'if (!titleMatched || !artistMatched) return 0' in catalog, 'Canonical matching must require both title and artist agreement'
+assert 'delta <= 4' in catalog, 'Canonical matching should use duration as a tie-breaker when available'
 assert 'gaana' not in catalog.lower() and 'jiosaavn' not in catalog.lower(), 'Unofficial scraper catalog must not be a core dependency'
 
 # Provider control plane + credential gates
