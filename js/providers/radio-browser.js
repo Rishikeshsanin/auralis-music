@@ -7,7 +7,8 @@ const ENDPOINT = '/api/radio';
 [
   ['auralisRadioV6', './experience-v6.css'],
   ['auralisExperienceV7', './experience-v7.css'],
-  ['auralisAuraSurfaceV7', './experience-v7-aura.css']
+  ['auralisAuraSurfaceV7', './experience-v7-aura.css'],
+  ['auralisAuraThemeV8', './experience-v8-aura.css']
 ].forEach(([key, href]) => {
   if (document.querySelector(`link[data-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}]`)) return;
   const link = document.createElement('link');
