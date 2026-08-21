@@ -1,0 +1,250 @@
+/* Auralis Aura Theme v8 — full-site artwork-driven visual mode.
+   This never uses album artwork as a background image. Artwork only supplies colors. */
+
+@property --aura-primary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #a978ff;
+}
+
+@property --aura-secondary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #65d2ff;
+}
+
+html.aura-mode-on {
+  --accent: var(--aura-primary);
+  --accent-2: var(--aura-secondary);
+  --line: color-mix(in srgb, var(--aura-primary) 13%, rgba(255,255,255,.075));
+  --line-strong: color-mix(in srgb, var(--aura-secondary) 18%, rgba(255,255,255,.12));
+  transition: --aura-primary 1.15s cubic-bezier(.22,.8,.2,1), --aura-secondary 1.15s cubic-bezier(.22,.8,.2,1);
+}
+
+html.aura-mode-on body {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 12% 16%, color-mix(in srgb, var(--aura-primary) 15%, #08090d), transparent 30%),
+    radial-gradient(circle at 84% 12%, color-mix(in srgb, var(--aura-secondary) 13%, #08090d), transparent 32%),
+    #08090d;
+}
+
+/* Moving liquid-light field behind the interface. */
+html.aura-mode-on body::before,
+html.aura-mode-on body::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 45%;
+  will-change: transform, opacity, filter;
+}
+
+html.aura-mode-on body::before {
+  width: 78vw;
+  height: 78vw;
+  min-width: 780px;
+  min-height: 780px;
+  left: -22vw;
+  top: -34vw;
+  background:
+    radial-gradient(circle at 35% 38%, color-mix(in srgb, var(--aura-primary) 72%, transparent) 0 12%, transparent 46%),
+    radial-gradient(circle at 68% 58%, color-mix(in srgb, var(--aura-secondary) 52%, transparent) 0 13%, transparent 48%);
+  filter: blur(72px) saturate(1.35);
+  opacity: .68;
+  mix-blend-mode: screen;
+  animation: auraLiquidA 15s ease-in-out infinite alternate;
+}
+
+html.aura-mode-on body::after {
+  width: 70vw;
+  height: 70vw;
+  min-width: 680px;
+  min-height: 680px;
+  right: -26vw;
+  bottom: -34vw;
+  background:
+    radial-gradient(circle at 34% 36%, color-mix(in srgb, var(--aura-secondary) 60%, transparent) 0 11%, transparent 46%),
+    radial-gradient(circle at 66% 64%, color-mix(in srgb, var(--aura-primary) 44%, transparent) 0 15%, transparent 51%);
+  filter: blur(86px) saturate(1.4);
+  opacity: .58;
+  mix-blend-mode: screen;
+  animation: auraLiquidB 18s ease-in-out infinite alternate;
+}
+
+@keyframes auraLiquidA {
+  0% { transform: translate3d(-2%, -3%, 0) rotate(-7deg) scale(.94); }
+  45% { transform: translate3d(15%, 11%, 0) rotate(8deg) scale(1.08); }
+  100% { transform: translate3d(31%, 4%, 0) rotate(18deg) scale(1.01); }
+}
+
+@keyframes auraLiquidB {
+  0% { transform: translate3d(3%, 5%, 0) rotate(10deg) scale(1); }
+  50% { transform: translate3d(-18%, -12%, 0) rotate(-8deg) scale(1.1); }
+  100% { transform: translate3d(-30%, -3%, 0) rotate(-19deg) scale(.96); }
+}
+
+/* Existing ambient blobs become part of the artwork palette. */
+html.aura-mode-on .ambient {
+  opacity: .6;
+  filter: blur(82px) saturate(1.5);
+  mix-blend-mode: screen;
+  transition: background 1.1s ease, opacity .8s ease, transform 1.1s ease;
+}
+
+html.aura-mode-on .ambient-a {
+  background: radial-gradient(circle, var(--aura-primary), color-mix(in srgb, var(--aura-primary) 20%, transparent) 58%, transparent 76%);
+  animation: auraAmbientA 11s ease-in-out infinite alternate;
+}
+
+html.aura-mode-on .ambient-b {
+  background: radial-gradient(circle, var(--aura-secondary), color-mix(in srgb, var(--aura-secondary) 18%, transparent) 58%, transparent 76%);
+  opacity: .48;
+  animation: auraAmbientB 13s ease-in-out infinite alternate;
+}
+
+@keyframes auraAmbientA { to { transform: translate(-8vw, 12vh) scale(1.16); } }
+@keyframes auraAmbientB { to { transform: translate(10vw, -10vh) scale(1.2); } }
+
+/* Glass shell: clearly themed, still dark enough for text contrast. */
+html.aura-mode-on .sidebar,
+html.aura-mode-on .topbar,
+html.aura-mode-on .player {
+  backdrop-filter: blur(30px) saturate(1.25);
+  -webkit-backdrop-filter: blur(30px) saturate(1.25);
+  border-color: color-mix(in srgb, var(--aura-primary) 20%, rgba(255,255,255,.08));
+  transition: background .85s ease, border-color .85s ease, box-shadow .85s ease;
+}
+
+html.aura-mode-on .sidebar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--aura-primary) 12%, rgba(7,8,12,.91)), rgba(7,8,12,.91) 40%),
+    rgba(7,8,12,.9);
+  box-shadow: 20px 0 70px color-mix(in srgb, var(--aura-primary) 8%, transparent);
+}
+
+html.aura-mode-on .topbar {
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--aura-primary) 11%, rgba(7,8,12,.88)),
+      color-mix(in srgb, var(--aura-secondary) 9%, rgba(7,8,12,.88)));
+  box-shadow: 0 15px 55px color-mix(in srgb, var(--aura-primary) 8%, transparent);
+}
+
+html.aura-mode-on .player {
+  background:
+    radial-gradient(circle at 12% -35%, color-mix(in srgb, var(--aura-primary) 28%, transparent), transparent 38%),
+    radial-gradient(circle at 82% 160%, color-mix(in srgb, var(--aura-secondary) 20%, transparent), transparent 42%),
+    rgba(7,8,12,.94);
+  box-shadow:
+    0 -1px 0 color-mix(in srgb, var(--aura-primary) 20%, transparent),
+    0 -25px 80px color-mix(in srgb, var(--aura-primary) 11%, transparent);
+}
+
+/* Main page surfaces inherit the current song palette. */
+html.aura-mode-on .hero,
+html.aura-mode-on .collection-view-hero,
+html.aura-mode-on .browse-hero {
+  border-color: color-mix(in srgb, var(--aura-primary) 28%, rgba(255,255,255,.08));
+  background:
+    radial-gradient(circle at 78% 22%, color-mix(in srgb, var(--aura-secondary) 24%, transparent), transparent 37%),
+    radial-gradient(circle at 22% 80%, color-mix(in srgb, var(--aura-primary) 16%, transparent), transparent 44%),
+    linear-gradient(125deg, rgba(13,14,20,.94), color-mix(in srgb, var(--aura-primary) 8%, #090a0f) 62%, rgba(13,12,20,.95));
+  box-shadow:
+    0 28px 90px rgba(0,0,0,.34),
+    0 18px 68px color-mix(in srgb, var(--aura-primary) 9%, transparent);
+}
+
+html.aura-mode-on .hero h1 em {
+  background: linear-gradient(90deg, #fff 3%, var(--aura-primary) 52%, var(--aura-secondary));
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+html.aura-mode-on .music-card,
+html.aura-mode-on .collection-card,
+html.aura-mode-on .world-card,
+html.aura-mode-on .provider-card,
+html.aura-mode-on .radio-card,
+html.aura-mode-on .v5-language-station,
+html.aura-mode-on .sidebar-card,
+html.aura-mode-on .catalog-note,
+html.aura-mode-on .search-wrap,
+html.aura-mode-on .radio-search {
+  border-color: color-mix(in srgb, var(--aura-primary) 16%, rgba(255,255,255,.075));
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--aura-primary) 7%, rgba(255,255,255,.052)),
+      color-mix(in srgb, var(--aura-secondary) 4%, rgba(255,255,255,.014)));
+  transition: background .7s ease, border-color .7s ease, box-shadow .7s ease, transform .2s ease;
+}
+
+html.aura-mode-on .music-card:hover,
+html.aura-mode-on .collection-card:hover,
+html.aura-mode-on .world-card:hover,
+html.aura-mode-on .provider-card:hover,
+html.aura-mode-on .radio-card:hover,
+html.aura-mode-on .v5-language-station:hover {
+  border-color: color-mix(in srgb, var(--aura-primary) 38%, rgba(255,255,255,.12));
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.28),
+    0 12px 42px color-mix(in srgb, var(--aura-primary) 12%, transparent);
+}
+
+html.aura-mode-on .track-row:hover {
+  background: color-mix(in srgb, var(--aura-primary) 7%, rgba(255,255,255,.025));
+}
+
+html.aura-mode-on .track-row.active,
+html.aura-mode-on .music-card.active,
+html.aura-mode-on .radio-card.active,
+html.aura-mode-on .nav-item.active,
+html.aura-mode-on .mobile-nav button.active {
+  border-color: color-mix(in srgb, var(--aura-primary) 42%, rgba(255,255,255,.1));
+  background: linear-gradient(100deg,
+    color-mix(in srgb, var(--aura-primary) 22%, rgba(255,255,255,.025)),
+    color-mix(in srgb, var(--aura-secondary) 10%, rgba(255,255,255,.018)));
+  box-shadow:
+    inset 2px 0 0 var(--aura-primary),
+    0 10px 36px color-mix(in srgb, var(--aura-primary) 12%, transparent);
+}
+
+html.aura-mode-on .primary-button {
+  color: #09090d;
+  background: linear-gradient(110deg,
+    color-mix(in srgb, var(--aura-primary) 36%, #fff),
+    color-mix(in srgb, var(--aura-secondary) 32%, #fff));
+  box-shadow: 0 10px 34px color-mix(in srgb, var(--aura-primary) 20%, transparent);
+}
+
+html.aura-mode-on .profile-avatar,
+html.aura-mode-on .record-label {
+  background: linear-gradient(135deg, var(--aura-primary), var(--aura-secondary));
+  box-shadow: 0 0 28px color-mix(in srgb, var(--aura-primary) 24%, transparent);
+}
+
+html.aura-mode-on .brand-mark i {
+  background: linear-gradient(180deg, var(--aura-secondary), var(--aura-primary));
+  box-shadow: 0 0 22px color-mix(in srgb, var(--aura-primary) 34%, transparent);
+}
+
+html.aura-mode-on input[type='range'] { accent-color: var(--aura-primary); }
+html.aura-mode-on ::selection { background: color-mix(in srgb, var(--aura-primary) 45%, transparent); color: #fff; }
+
+/* Small visual confirmation when a new track swaps the palette. */
+html.aura-mode-on.aura-swap .ambient-a { animation-duration: 7.5s; }
+html.aura-mode-on.aura-swap .ambient-b { animation-duration: 9s; }
+
+@media (max-width: 760px) {
+  html.aura-mode-on body::before,
+  html.aura-mode-on body::after { min-width: 520px; min-height: 520px; opacity: .48; }
+  html.aura-mode-on .sidebar { box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.aura-mode-on body::before,
+  html.aura-mode-on body::after,
+  html.aura-mode-on .ambient-a,
+  html.aura-mode-on .ambient-b { animation: none !important; }
+  html.aura-mode-on { transition: none; }
+}
