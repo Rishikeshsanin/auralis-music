@@ -27,6 +27,16 @@ function safeHttps(value = '') {
   }
 }
 
+function searchLinks(title = '', artist = '') {
+  const query = encodeURIComponent(`${title} ${artist}`.trim());
+  return {
+    youtubeSearch: `https://www.youtube.com/results?search_query=${query}`,
+    spotifySearch: `https://open.spotify.com/search/${query}`,
+    appleMusicSearch: `https://music.apple.com/us/search?term=${query}`,
+    soundcloudSearch: `https://soundcloud.com/search/sounds?q=${query}`
+  };
+}
+
 async function fetchJson(url, { headers = {}, timeout = 4500 } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
@@ -49,7 +59,6 @@ function artistName(item) {
 function deezerTrack(item) {
   const artist = artistName(item) || 'Unknown artist';
   const album = item?.album || {};
-  const query = encodeURIComponent(`${item?.title || ''} ${artist}`.trim());
   return {
     graphId: `deezer:track:${item.id}`,
     kind: 'track',
@@ -70,10 +79,7 @@ function deezerTrack(item) {
     playback: item.preview ? 'preview' : 'metadata',
     sourceLinks: {
       deezer: safeHttps(item.link || ''),
-      youtubeSearch: `https://www.youtube.com/results?search_query=${query}`,
-      spotifySearch: `https://open.spotify.com/search/${query}`,
-      appleMusicSearch: `https://music.apple.com/us/search?term=${query}`,
-      soundcloudSearch: `https://soundcloud.com/search/sounds?q=${query}`
+      ...searchLinks(item?.title || '', artist)
     }
   };
 }
@@ -148,7 +154,38 @@ function mbCandidate(recording) {
     isrc: (recording.isrcs || [])[0] || '',
     releaseDate: recording['first-release-date'] || release.date || '',
     releaseGroupId: releaseGroup.id || '',
-    releaseTitle: release.title || releaseGroup.title || ''
+    releaseTitle: release.title || releaseGroup.title || '',
+    length: Number(recording.length || 0)
+  };
+}
+
+function musicBrainzTrack(recording) {
+  const candidate = mbCandidate(recording);
+  const artworkFallback = candidate.releaseGroupId
+    ? `https://coverartarchive.org/release-group/${encodeURIComponent(candidate.releaseGroupId)}/front-500`
+    : '';
+  return {
+    graphId: `musicbrainz:recording:${candidate.mbid}`,
+    kind: 'track',
+    provider: 'MusicBrainz',
+    providerId: candidate.mbid,
+    title: candidate.title || 'Untitled',
+    artist: candidate.artist || 'Unknown artist',
+    album: candidate.releaseTitle || '',
+    duration: candidate.length ? Math.round(candidate.length / 1000) : 0,
+    releaseDate: candidate.releaseDate,
+    artwork: '',
+    artworkFallback,
+    previewUrl: '',
+    permalink: candidate.mbid ? `https://musicbrainz.org/recording/${encodeURIComponent(candidate.mbid)}` : '',
+    playback: 'metadata',
+    canonical: {
+      mbid: candidate.mbid,
+      isrc: candidate.isrc,
+      releaseDate: candidate.releaseDate,
+      releaseGroupId: candidate.releaseGroupId
+    },
+    sourceLinks: searchLinks(candidate.title, candidate.artist)
   };
 }
 
@@ -294,12 +331,21 @@ export default async function handler(req, res) {
 
     if (!q) return res.status(400).json({ error: 'Search query required' });
 
+    const shouldCanonicalize = kind === 'track' && offset === 0;
     const [deezer, recordings] = await Promise.all([
-      deezerSearch(q, kind, limit, offset),
-      kind === 'track' && offset === 0 ? musicBrainzSearch(q, Math.min(limit, 20)).catch(() => []) : Promise.resolve([])
+      deezerSearch(q, kind, limit, offset).catch(() => []),
+      shouldCanonicalize ? musicBrainzSearch(q, Math.min(limit, 20)).catch(() => []) : Promise.resolve([])
     ]);
 
-    const items = kind === 'track' ? attachMusicBrainz(deezer, recordings) : deezer;
+    let items;
+    if (kind === 'track') {
+      items = deezer.length
+        ? attachMusicBrainz(deezer, recordings)
+        : recordings.slice(0, limit).map(musicBrainzTrack);
+    } else {
+      items = deezer;
+    }
+
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
     return res.status(200).json({
       mode: 'search',
@@ -307,12 +353,12 @@ export default async function handler(req, res) {
       query: q,
       items,
       nextOffset: offset + items.length,
-      hasMore: items.length >= limit,
+      hasMore: deezer.length >= limit,
       coverage: {
-        catalog: 'Deezer',
+        catalog: deezer.length ? 'Deezer' : recordings.length ? 'MusicBrainz canonical fallback' : 'No active catalog match',
         canonical: recordings.length ? 'MusicBrainz' : 'Deezer',
         artwork: 'Deezer + Cover Art Archive fallback',
-        playback: 'Deezer 30-second preview where available'
+        playback: deezer.length ? 'Deezer 30-second preview where available' : 'Resolve through Auralis full-source / official-embed providers'
       }
     });
   } catch (error) {
