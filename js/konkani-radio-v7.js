@@ -73,3 +73,6 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })();
+
+// Load the v9 Music Graph as a progressive enhancement after the proven v7/v8 shell.
+import('./music-graph-v9.js').catch(error => console.warn('Auralis Music Graph v9 did not start', error));
