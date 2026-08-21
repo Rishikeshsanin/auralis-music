@@ -12,8 +12,6 @@ function clean(value = '') {
   return String(value).toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\([^)]*(official|video|audio|lyrics?|remaster|version)[^)]*\)/gi, ' ')
-    .replace(/\[[^\]]*(official|video|audio|lyrics?|remaster|version)[^\]]*\]/gi, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
@@ -190,22 +188,21 @@ function musicBrainzTrack(recording) {
 }
 
 function matchScore(item, mb) {
-  const t1 = clean(item.title);
+  // Keep version/remix/acoustic qualifiers for identity matching. A variant must not
+  // inherit the canonical recording of the base song just because artist/title overlap.
+  const t1 = clean(`${item.title || ''} ${item.version || ''}`);
   const t2 = clean(mb.title);
   const a1 = clean(item.artist);
   const a2 = clean(mb.artist);
 
-  const titleExact = Boolean(t1 && t2 && t1 === t2);
-  const titlePartial = Boolean(t1 && t2 && (t1.includes(t2) || t2.includes(t1)));
+  const titleMatched = Boolean(t1 && t2 && t1 === t2);
   const artistExact = Boolean(a1 && a2 && a1 === a2);
   const artistPartial = Boolean(a1 && a2 && (a1.includes(a2) || a2.includes(a1)));
-  const titleMatched = titleExact || titlePartial;
   const artistMatched = artistExact || artistPartial;
 
-  // An exact title alone is unsafe: covers/remixes by unrelated artists are common.
   if (!titleMatched || !artistMatched) return 0;
 
-  let score = (titleExact ? 8 : 4) + (artistExact ? 8 : 3);
+  let score = 8 + (artistExact ? 8 : 3);
   const itemDuration = Number(item.duration || 0);
   const mbDuration = Number(mb.length || 0) / 1000;
   if (itemDuration && mbDuration) {
@@ -223,7 +220,7 @@ function attachMusicBrainz(items, recordings) {
     const best = mb
       .map(candidate => ({ candidate, score: matchScore(item, candidate) }))
       .sort((a, b) => b.score - a.score)[0];
-    if (!best || best.score < 7) return item;
+    if (!best || best.score < 11) return item;
     const candidate = best.candidate;
     return {
       ...item,
