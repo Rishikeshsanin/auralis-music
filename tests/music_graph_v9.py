@@ -13,13 +13,23 @@ for name in required:
     path = root / name
     assert path.exists() and path.stat().st_size > 0, f'missing v9 file: {name}'
 
+html = (root / 'index.html').read_text()
 app = (root / 'js/music-graph-v9.js').read_text()
 css = (root / 'experience-v9.css').read_text()
 catalog = (root / 'api/catalog.js').read_text()
 providers = (root / 'api/providers.js').read_text()
 youtube = (root / 'api/youtube.js').read_text()
+radio_provider = (root / 'js/providers/radio-browser.js').read_text()
 konkani = (root / 'js/konkani-radio-v7.js').read_text()
 sw = (root / 'sw.js').read_text()
+
+# Deterministic layered boot: app-v3 -> radio provider -> v6/v7 -> Konkani guard -> v9.
+assert './js/app-v3.js' in html and './js/row-play-targets.js' in html, 'base Auralis boot scripts missing'
+for duplicate in ['./js/radio-reliability-v6.js', './js/auralis-experience-v7.js', './js/konkani-radio-v7.js']:
+    assert f'<script src="{duplicate}">' not in html, f'duplicate classic enhancement boot found: {duplicate}'
+assert "import '../radio-reliability-v6.js'" in radio_provider, 'radio reliability module boot missing'
+assert "import '../auralis-experience-v7.js'" in radio_provider and "import '../konkani-radio-v7.js'" in radio_provider, 'experience module boot missing'
+assert "import('./music-graph-v9.js')" in konkani, 'v9 progressive boot missing'
 
 # Universal catalog + Music Graph UI
 assert 'AURALIS MUSIC GRAPH' in app and 'universeView' in app, 'Music Graph universe UI missing'
@@ -63,8 +73,7 @@ assert 'v9-skeleton' in css and '@keyframes' in css, 'v9 loading animation missi
 assert 'prefers-reduced-motion' in css, 'Reduced-motion support missing'
 assert 'v9-provider-row' in css and 'v9-graph-card' in css and 'v9-playlist-card' in css, 'v9 major surfaces not styled'
 
-# Layered boot + PWA shell
-assert "import('./music-graph-v9.js')" in konkani, 'v9 boot loader missing'
+# PWA shell
 assert "auralis-shell-v13" in sw, 'PWA cache was not bumped to v13'
 assert './experience-v9.css' in sw and './js/music-graph-v9.js' in sw, 'v9 shell assets missing from PWA cache'
 
