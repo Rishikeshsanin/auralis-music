@@ -50,7 +50,7 @@
     if (Date.now() - lastAppliedAt < 500) return;
     working = true;
     try {
-      const response = await fetch('/api/radio?mode=search&q=AmchiKONKANI&limit=3', { headers: { Accept } });
+      const response = await fetch('/api/radio?mode=search&q=AmchiKONKANI&limit=3', { headers: { Accept: 'application/json' } });
       if (!response.ok) return;
       const json = await response.json();
       const station = (json.stations || []).find(item => /amchikonkani/i.test(item.name || '') && item.auralis_verified);
