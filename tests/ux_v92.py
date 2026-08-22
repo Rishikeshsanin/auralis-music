@@ -11,10 +11,9 @@ assert "#radioView.view.active-view{display:flex!important" in css, 'Radio must 
 assert 'ART_HOST_SELECTOR' in ux and 'repairImage' in ux and 'auralis-art-fallback-v92' in ux, 'global artwork failure recovery missing'
 assert "window.addEventListener('error'" in ux and 'HTMLImageElement' in ux, 'runtime image failures are not captured'
 assert 'scanBrokenArtwork' in ux and 'naturalWidth' in ux, 'already-failed cached images are not repaired'
-assert 'auralis:full-playback-panel:v92' in ux and "return 'compact'" in ux, 'full playback should default to compact mode'
-assert 'stopFullPlaybackV92' in ux and 'window.AuralisFullPlaybackV91?.stop?.()' in ux, 'compact playback needs a separate explicit stop control'
-assert 'minimized-v92' in css and 'min-width:200px!important' in css and 'min-height:200px!important' in css, 'YouTube mini-player viewport must remain visibly at least 200x200'
+assert 'restorePlaybackDockContract' in ux, 'v9.2.1 must restore the known-good v9.1 playback dock contract'
+assert "classList.toggle('minimized-v92'" not in ux and 'PANEL_KEY' not in ux and "event.target.closest?.('#closeFullPlaybackV91')" not in ux, 'v9.2.1 must not intercept or minimize the YouTube playback dock'
 assert "import('./ux-reliability-v9-2.js')" in konkani, 'v9.2 UX layer is not in the progressive boot chain'
-assert 'auralis-shell-v15' in sw and './experience-v9-2.css' in sw and './js/ux-reliability-v9-2.js' in sw, 'PWA v15 must cache v9.2 assets'
+assert 'auralis-shell-v15' in sw and './experience-v9-2.css' in sw and './js/ux-reliability-v9-2.js' in sw, 'PWA shell must retain v9.2 assets'
 
-print('Auralis UX Reliability v9.2 regression tests passed')
+print('Auralis UX Reliability v9.2/v9.2.1 regression tests passed')
