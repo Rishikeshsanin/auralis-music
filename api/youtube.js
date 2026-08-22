@@ -124,7 +124,7 @@ async function fetchJson(url, timeout = 6500) {
 }
 
 function buildSearchQuery({ q, title, artist, album }) {
-  const pieces = [title || q, artist, album].map(safeText).filter(Boolean);
+  const pieces = [title || q, artist, album].map(value => safeText(value)).filter(Boolean);
   return `${pieces.join(' ')} official audio`.trim();
 }
 
