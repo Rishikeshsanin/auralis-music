@@ -14,6 +14,7 @@ assert "videoEmbeddable', 'true'" in youtube and "videoSyndicated', 'true'" in y
 assert "snippet,status,contentDetails" in youtube, 'resolver must verify video status and duration'
 assert 'qualityScore' in youtube and 'bestMatch' in youtube, 'exact-song ranking/resolver missing'
 assert '.map(value => safeText(value))' in youtube and '.map(safeText)' not in youtube, 'resolver query terms must not be truncated by Array.map index arguments'
+assert '[title || q, artist || album]' in youtube, 'resolver should prefer title + artist and only use album when artist is missing'
 assert 'karaoke' in youtube and 'cover' in youtube and 'nightcore' in youtube, 'bad-match penalties missing'
 assert 'youtube-dl' not in youtube.lower() and 'yt-dlp' not in youtube.lower(), 'download/extraction integrations are forbidden'
 
