@@ -1,8 +1,9 @@
 (() => {
-  const VERSION = '9.2.1';
+  const VERSION = '9.2.2';
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ART_HOST_SELECTOR = '.cover-wrap,.row-cover,.queue-item-cover,.player-cover,.radio-logo,.v5-radio-logo,.v91-now-art';
+  let maintenanceQueued = false;
 
   function loadCss() {
     if ($('#auralisV92Css')) return;
@@ -60,38 +61,60 @@
   function enforceInactiveViewIsolation() {
     const radio = $('#radioView');
     if (!radio) return;
-    radio.setAttribute('aria-hidden', radio.classList.contains('active-view') ? 'false' : 'true');
+    const next = radio.classList.contains('active-view') ? 'false' : 'true';
+    if (radio.getAttribute('aria-hidden') !== next) radio.setAttribute('aria-hidden', next);
   }
 
   function restorePlaybackDockContract() {
     const dock = $('#fullPlaybackDockV91');
     if (!dock) return;
-    dock.classList.remove('minimized-v92');
-    dock.querySelector('#stopFullPlaybackV92')?.remove();
+
+    // Important: every mutation below is guarded. The v9.2.1 implementation
+    // rewrote text/attributes on every MutationObserver callback, which could
+    // recursively trigger the observer and freeze the page.
+    if (dock.classList.contains('minimized-v92')) dock.classList.remove('minimized-v92');
+
+    const legacyStop = dock.querySelector('#stopFullPlaybackV92');
+    if (legacyStop) legacyStop.remove();
+
     const close = dock.querySelector('#closeFullPlaybackV91');
-    if (close) {
-      close.textContent = '×';
-      close.title = 'Stop full playback';
+    if (!close) return;
+    if (close.textContent !== '×') close.textContent = '×';
+    if (close.title !== 'Stop full playback') close.title = 'Stop full playback';
+    if (close.getAttribute('aria-label') !== 'Stop full playback') {
       close.setAttribute('aria-label', 'Stop full playback');
     }
   }
 
-  function start() {
-    loadCss();
+  function runMaintenance() {
+    maintenanceQueued = false;
     restorePlaybackDockContract();
     scanBrokenArtwork();
     enforceInactiveViewIsolation();
+  }
 
-    const observer = new MutationObserver(() => {
-      restorePlaybackDockContract();
-      scanBrokenArtwork();
-      enforceInactiveViewIsolation();
+  function queueMaintenance() {
+    if (maintenanceQueued) return;
+    maintenanceQueued = true;
+    requestAnimationFrame(runMaintenance);
+  }
+
+  function start() {
+    loadCss();
+    runMaintenance();
+
+    const observer = new MutationObserver(queueMaintenance);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class']
     });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
 
     window.AuralisUXV92 = {
       version: VERSION,
-      repairArtwork: scanBrokenArtwork
+      repairArtwork: scanBrokenArtwork,
+      runMaintenance
     };
   }
 
