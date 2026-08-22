@@ -1,6 +1,6 @@
 # Auralis 🎧
 
-> A polished multi-provider music platform that keeps one Auralis UI over full-track catalogs, universal music metadata, albums/artists, live radio, playlists, moods, genres, provider health and an artwork-driven Aura Mode.
+> A polished multi-provider music platform with universal music discovery, full-song playback routes, albums/artists, live radio, playlists, provider health, and an artwork-driven Aura Mode — all behind one Auralis UI.
 
 [![Smoke Test](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml/badge.svg)](https://github.com/Rishikeshsanin/auralis-music/actions/workflows/smoke.yml)
 [![Live on Vercel](https://img.shields.io/badge/Live-Vercel-000000?logo=vercel)](https://auralis-music-lime.vercel.app)
@@ -10,21 +10,98 @@
 
 ## What Auralis is
 
-Auralis is not a static Spotify clone and it does not pretend every catalog API grants unrestricted full-song playback.
+Auralis is not a static Spotify clone. It combines several legitimate music sources while keeping catalog discovery, canonical metadata, playback, live radio and provider health as separate layers.
 
-The platform separates five concerns:
+The current platform uses:
 
-1. **Full playback** — Audius and Jamendo where those providers expose complete streams.
-2. **Universal catalog discovery** — Deezer-backed track/album/artist discovery with explicitly labelled previews where available.
-3. **Canonical music identity** — MusicBrainz IDs, ISRCs and release metadata.
-4. **Artwork + context** — provider artwork with Cover Art Archive fallback.
-5. **Live radio** — Radio Browser with Auralis-side stream verification and HLS support.
+- **YouTube Data API + IFrame Player** — full-song/video playback through visible official embeds when a reliable embeddable match is available.
+- **Audius** — open full-track catalog where tracks are streamable.
+- **Jamendo** — independent full-track catalog.
+- **Deezer** — broad commercial track/album/artist discovery and clearly labelled 30-second previews.
+- **MusicBrainz** — canonical recording identity, MBIDs, ISRCs and release metadata.
+- **Cover Art Archive** — canonical artwork fallback.
+- **Radio Browser** — worldwide live radio through Auralis's verified radio gateway.
+- **hls.js** — HLS compatibility where native browser playback is insufficient.
 
-Credentialed services such as YouTube, SoundCloud, Audiomack, Last.fm, Spotify and Apple Music are represented in the provider control plane and can be activated without rewriting the Auralis interface.
+Auralis never presents a preview as a full song and does not use downloader/extraction APIs.
+
+## Full Playback v9.1
+
+v9.1 adds the **Auralis Full Playback Resolver** on top of Music Graph v9.
+
+```text
+User selects a track
+        ↓
+Auralis Music Graph
+(title / artist / album / artwork)
+        ↓
+Full Playback Resolver
+        ↓
+YouTube Data API
+        ↓
+embeddable public candidates
+        ↓
+match + quality ranking
+        ↓
+best reliable full source
+        ↓
+Official YouTube IFrame Player
+        ↓
+Auralis controls / queue / Aura UI
+```
+
+### Resolver behavior
+
+The server-side resolver:
+
+- searches primarily with **title + artist** to avoid album/remix bias
+- uses album metadata as fallback context when artist metadata is unavailable
+- requests only embeddable/syndicated video results
+- verifies video status and duration through `videos.list`
+- favors exact title/artist matches
+- favors artist Topic channels and official/label-style sources
+- penalizes unrelated covers, karaoke, nightcore, reactions, tutorials and unrequested variants
+- returns one `bestMatch` plus fallback candidates
+- keeps the YouTube API key server-side
+- uses CDN/browser caching to reduce repeated search quota usage
+
+Example production requests:
+
+```text
+GET /api/youtube?title=Tum%20Hi%20Ho&artist=Arijit%20Singh
+GET /api/youtube?title=Blinding%20Lights&artist=The%20Weeknd
+GET /api/youtube?title=Naatu%20Naatu&artist=Rahul%20Sipligunj%20Kaala%20Bhairava
+```
+
+### Playback UI
+
+Music Graph tracks, album tracks and Auralis playlist rows expose a **▶ Full** action.
+
+When full playback starts:
+
+- a visible Auralis glass playback dock hosts the official YouTube IFrame
+- the existing bottom player reflects the resolved title/artist/artwork
+- play/pause is bridged to the YouTube player
+- seek and volume use the existing Auralis controls
+- next/previous works with the resolved Auralis queue
+- Aura Mode continues to use the selected track artwork/theme
+- the layout remains responsive on mobile
+
+The embedded player is intentionally visible; Auralis does not extract or hide YouTube audio.
+
+### Match cache
+
+Resolved track-to-video matches are cached locally under:
+
+```text
+auralis:youtube-resolver:v1
+```
+
+with a bounded 24-hour TTL, while API responses also use CDN cache headers. This avoids spending a YouTube search request every time the same song is replayed.
 
 ## Music Graph v9
 
-v9 introduces the **Auralis Music Graph**: a normalized layer above individual APIs.
+The **Auralis Music Graph** normalizes individual APIs into one catalog experience.
 
 ```text
                               AURALIS
@@ -35,18 +112,17 @@ v9 introduces the **Auralis Music Graph**: a normalized layer above individual A
               │                  │                  │
            Identity           Discovery           Playback
               │                  │                  │
-        MusicBrainz          Deezer            Audius
-        ISRC / MBID          charts            Jamendo
-        releases             albums            Radio Browser
-              │              artists                │
-        Cover Art                │             direct / HLS
-              │                  │                  │
+        MusicBrainz          Deezer            YouTube
+        ISRC / MBID          charts            Audius
+        releases             albums            Jamendo
+              │              artists          Radio Browser
+        Cover Art                │                  │
               └──────────────────┴──────────────────┘
                                  │
                          one Auralis UI
 ```
 
-A search can now contain:
+A search can contain:
 
 - mainstream catalog tracks
 - album entities
@@ -55,62 +131,37 @@ A search can now contain:
 - release dates
 - MusicBrainz recording IDs
 - ISRCs when available
-- preview availability
+- preview/full-playback availability
 - source links
-- a handoff to the existing full-track Auralis catalogs
 
-If Deezer has no result but MusicBrainz can identify the recording, v9 can return a **canonical metadata fallback** instead of showing nothing.
-
-### Search philosophy
-
-Auralis does not show an “API 1 / API 2 / API 3” interface. Providers are implementation details.
-
-```text
-query
-  ↓
-provider search
-  ↓
-normalize
-  ↓
-canonical identity
-  ↓
-artwork / metadata enrichment
-  ↓
-playback availability
-  ↓
-Auralis result
-```
+If Deezer has no result but MusicBrainz can identify a recording, the Music Graph can return a canonical metadata fallback instead of simply showing nothing.
 
 ## Source Pulse — provider control plane
 
-`/api/providers` powers **Source Pulse**, the internal provider-health/control layer.
+`GET /api/providers` powers the provider-health layer.
 
-It reports provider state, latency, last check, capabilities and credential readiness.
+It reports provider state, latency, capabilities and credential readiness without exposing secrets.
 
-Current provider roles:
-
-| Provider | v9 role | Playback semantics |
+| Provider | Current role | Playback semantics |
 | --- | --- | --- |
-| Audius | Active open music catalog | Full stream where streamable |
-| Jamendo | Active independent catalog | Full stream exposed by Jamendo |
-| Deezer | Universal catalog / charts / albums / artists | 30-second preview where available; never labelled as full |
-| MusicBrainz | Canonical recording / release identity | Metadata only |
-| Cover Art Archive | Album/release artwork fallback | Artwork only |
-| Radio Browser | Worldwide live-radio directory | Verified live streams |
-| YouTube | Official music video fallback | Credential-gated official IFrame playback |
+| YouTube | **Active full-playback resolver** | Full playback through visible official IFrame embeds |
+| Audius | Active open catalog | Full stream where streamable |
+| Jamendo | Active independent catalog | Full stream where exposed by Jamendo |
+| Deezer | Universal catalog / albums / artists / charts | 30-second preview where available |
+| MusicBrainz | Canonical identity | Metadata only |
+| Cover Art Archive | Artwork fallback | Artwork only |
+| Radio Browser | Worldwide live radio | Verified live streams |
 | SoundCloud | Future registered provider | Full/preview according to provider availability |
 | Last.fm | Future recommendation intelligence | Metadata/discovery only |
-| Audiomack | Future catalog provider | Credential-gated |
-| Spotify | Optional connected provider | User authorization / Premium playback rules apply |
+| Audiomack | Future credentialed provider | Provider-dependent |
+| Spotify | Optional connected provider | User authorization / Premium rules apply |
 | Apple Music | Optional connected provider | User authorization / subscription rules apply |
 
-A provider can be online, degraded, client-managed or `needs_credentials`. Missing credentials do not break the rest of Auralis.
+Missing optional credentials never prevent the rest of Auralis from working.
 
 ## Universe
 
-The v9 UI adds a Music Graph/Universe experience while preserving the existing visual language.
-
-It supports:
+The Universe/Music Graph UI supports:
 
 - universal track search
 - album search
@@ -119,53 +170,43 @@ It supports:
 - album detail views
 - artist detail views
 - artwork-rich cards
-- source availability
 - canonical metadata
+- full-playback actions
+- Source Pulse
 - shimmer/skeleton states
 - responsive layouts
-- Source Pulse provider view
 
-Normal Auralis search also receives a broad-catalog rail above the existing playable Audius/Jamendo results.
+Normal Auralis search also receives the broad Music Graph catalog rail above existing direct Audius/Jamendo results.
 
 ## Auralis playlists
 
-v9 replaces the old playlist placeholder with real **provider-independent local playlists**.
+Auralis playlists are provider-independent and local-first.
 
-A playlist can contain Music Graph entries regardless of which catalog originally supplied the metadata. This is intentionally local-first until optional cloud sync is enabled.
+Current capabilities:
 
-Current playlist capabilities:
+- create and name playlists
+- add Music Graph tracks
+- mix tracks discovered through different providers
+- open/remove/delete
+- resolve full playback at play time
 
-- create
-- name
-- add tracks
-- open
-- remove tracks
-- delete
-- resolve playable sources where available
+Storage key:
 
-Storage key: `auralis:playlists:v2`.
+```text
+auralis:playlists:v2
+```
+
+Optional cloud sync can be added later without becoming a playback requirement.
 
 ## Playback rules
 
-Auralis is explicit about what each source can legally/technically provide.
+Auralis is explicit about source capabilities.
 
-### Full-track path
+### YouTube full playback
 
-Audius and Jamendo feed the main HTML audio player when they expose a playable stream.
+Auralis resolves a catalog track to a public, embeddable YouTube candidate and plays it through the official IFrame Player API.
 
-### Catalog-preview path
-
-Deezer previews are labelled **30-second catalog preview**. They are never presented as complete tracks.
-
-### Full-source resolver
-
-A Music Graph track can use **Find full source in Auralis** to search the active full-track catalogs for the canonical title + artist.
-
-### YouTube path
-
-`api/youtube.js` is prepared for the **official YouTube Data API + visible IFrame player** only.
-
-It deliberately does **not** use:
+The application deliberately does **not** use:
 
 - `yt-dlp`
 - `youtube-dl`
@@ -173,11 +214,21 @@ It deliberately does **not** use:
 - downloader APIs
 - hidden audio extraction
 
-Until a legitimate `YOUTUBE_API_KEY` is configured, the provider reports `needs_credentials` and Auralis continues normally.
+### Audius / Jamendo full tracks
+
+When those providers expose a complete playable stream, it feeds the normal HTML audio player directly.
+
+### Deezer catalog previews
+
+Deezer playback is labelled **30-second catalog preview** and is never represented as a full track.
+
+### Live radio
+
+Radio Browser stations route through the Auralis radio verifier and then use direct audio or HLS playback as appropriate.
 
 ## Discovery universe
 
-Auralis currently includes:
+Auralis includes:
 
 - **44 dynamic collections**
 - **24 genre worlds**
@@ -187,97 +238,69 @@ Auralis currently includes:
 - `Show more` / `Load more`
 - multi-provider search
 - provider normalization and deduplication
-- global catalog pulse in v9
+- global catalog pulse
 
 Collections are discovery recipes, not copied commercial playlists.
 
 ## Live Radio
 
-Radio remains a first-class part of Auralis.
-
-### Reliability layer
-
-Auralis adds server-side checks on top of Radio Browser:
+Auralis adds its own reliability layer above the Radio Browser directory:
 
 1. require safe public HTTPS targets
 2. reject broken entries
 3. collapse duplicate relays/codecs
 4. prefer browser-friendly variants
-5. perform a bounded stream probe
-6. reject obvious HTML/JSON/XML error pages
-7. mark returned stations with Auralis verification metadata
+5. perform bounded stream probes
+6. reject obvious HTML/JSON/XML error responses
+7. return Auralis verification metadata
 
-### HLS
+HLS (`.m3u8`) stations use native playback where available and `hls.js` fallback elsewhere.
 
-Regional/AIR-style `.m3u8` streams are supported through native HLS where available and `hls.js` fallback elsewhere.
+The radio UI keeps `Popular worldwide right now` pinned while selected/search/tuning content appears above it.
 
-### Radio layout
-
-```text
-selected / tuning result
-        ↓
-Popular worldwide right now   ← pinned
-        ↓
-radio intro + search
-        ↓
-language lanes
-```
-
-Language lanes currently include:
-
-- English
-- Hindi
-- Telugu
-- Kannada
-- Tamil
-- Malayalam
-- Konkani
-
-Konkani intentionally promotes one verified music-first option: **Radio AmchiKONKANI** when its stream passes the live verifier.
+Language lanes include English, Hindi, Telugu, Kannada, Tamil, Malayalam and Konkani. Konkani intentionally promotes **Radio AmchiKONKANI** when its stream passes Auralis verification.
 
 ## Aura Mode v8+
 
-Aura Mode is an optional full-site artwork-driven theme.
-
-The artwork itself is never used as the page background. Auralis samples/falls back to a palette and uses those colors to drive:
+Aura Mode is an optional full-site artwork-driven theme. Artwork itself is never used as the website background; Auralis derives a palette and drives:
 
 - animated liquid-light fields
-- sidebar and topbar glass
+- sidebar/topbar glass
 - player surfaces
 - active navigation
 - hero gradients
-- cards and borders
-- controls and glows
+- cards/borders
+- controls/glows
 
-The palette transitions when the current track changes. Aura is off by default and has configurable auto-off timing in the local profile.
+Palette changes follow the currently selected track. Aura is off by default and supports local auto-off settings.
 
 ## Loading / motion language
 
-Auralis uses loading feedback rather than appearing frozen during network work:
+Auralis uses visible loading feedback for asynchronous work:
 
 - track/card shimmer skeletons
+- Music Graph skeletons
+- full-playback resolver/loading state
 - radio tuning animation
-- bottom-player loading wave
-- artwork fade-in
-- button loading states
-- v9 Music Graph skeletons
+- bottom-player loading state
+- artwork transitions
 - reduced-motion support
 
 ## Guest-first personalization
 
-No account is required to browse or listen.
+No account is required to browse, search or play supported sources.
 
 Local features include:
 
-- optional display name
-- avatar initial
+- display name/avatar initial
 - liked items
 - recently played
 - playlists
 - Aura preferences
 - volume/preferences
+- YouTube resolver cache
 
-Supabase Project Hub is intentionally **not used by v9**. Optional cloud authentication/library sync can be added later without becoming a playback gate.
+Supabase Project Hub remains untouched by v9/v9.1. Optional cloud authentication/library sync can be added later without becoming a playback gate.
 
 ## Project architecture
 
@@ -286,10 +309,10 @@ auralis-music/
 ├── AGENTS.md
 ├── SUPABASE_HUB_RULES.md
 ├── api/
-│   ├── catalog.js          # Music Graph catalog gateway
-│   ├── providers.js        # Source Pulse provider telemetry
-│   ├── radio.js            # verified radio gateway
-│   └── youtube.js          # official credential-gated YouTube adapter
+│   ├── catalog.js
+│   ├── providers.js
+│   ├── radio.js
+│   └── youtube.js              # server-side full-playback resolver
 ├── docs/
 │   ├── PROVIDER_ARCHITECTURE_V9.md
 │   └── RELEASE_V9_CHECKLIST.md
@@ -305,6 +328,7 @@ auralis-music/
 │   ├── auralis-experience-v7.js
 │   ├── konkani-radio-v7.js
 │   ├── music-graph-v9.js
+│   ├── full-playback-v9-1.js
 │   ├── collections.js
 │   ├── library-map.js
 │   ├── store.js
@@ -313,17 +337,17 @@ auralis-music/
 │   ├── smoke.py
 │   ├── radio_v6.py
 │   ├── experience_v7.py
-│   └── music_graph_v9.py
+│   ├── music_graph_v9.py
+│   └── full_playback_v91.py
 ├── experience-v8-aura.css
 ├── experience-v9.css
+├── experience-v9-1.css
 ├── sw.js
 ├── index.html
 └── vercel.json
 ```
 
 ## Boot chain
-
-The release is deliberately layered so older proven subsystems remain covered by regression tests.
 
 ```text
 app-v3
@@ -336,9 +360,11 @@ Radio Browser provider
   └── Konkani guard
           ↓
       Music Graph v9
+          ↓
+      Full Playback v9.1
 ```
 
-The v9 test suite specifically prevents accidental duplicate classic-script booting of those enhancement layers.
+Each release layer is protected by regression tests so newer features do not silently break proven radio/Aura/catalog behavior.
 
 ## API endpoints
 
@@ -352,6 +378,20 @@ GET /api/catalog?mode=chart
 GET /api/catalog?mode=album&id=<deezer_album_id>
 GET /api/catalog?mode=artist&id=<deezer_artist_id>
 ```
+
+### Full playback resolver
+
+```text
+GET /api/youtube?title=<track>&artist=<artist>&album=<optional-album>&limit=8
+```
+
+Requires the server-only Vercel environment variable:
+
+```text
+YOUTUBE_API_KEY=<secret>
+```
+
+The value must never be committed to GitHub or exposed in frontend JavaScript.
 
 ### Provider status
 
@@ -367,57 +407,54 @@ GET /api/radio?mode=search&q=Dance%20Wave
 GET /api/radio?mode=language&q=hindi&country=IN
 ```
 
-### YouTube
-
-```text
-GET /api/youtube?q=<music query>
-```
-
-Requires server environment variable:
-
-```text
-YOUTUBE_API_KEY=...
-```
-
-Do not place server/API secrets in frontend JavaScript or commit them to GitHub.
-
 ## Local development
 
-Because Auralis contains Vercel serverless routes, `python -m http.server` is only suitable for static-shell checks. It cannot execute `/api/*`.
+Because Auralis contains Vercel serverless routes, a basic static file server cannot execute `/api/*`.
 
-For the complete application:
+Use:
 
 ```bash
 npx vercel dev
 ```
 
-Or use the deployed Vercel preview/production URL.
+Local full-playback testing also needs `YOUTUBE_API_KEY` through the local Vercel environment. Do not hard-code the key.
 
 ## Testing
 
-GitHub Actions validates JavaScript syntax plus layered regression suites:
+GitHub Actions checks JavaScript syntax and all layered regression suites:
 
 ```bash
 python tests/smoke.py
 python tests/radio_v6.py
 python tests/experience_v7.py
 python tests/music_graph_v9.py
+python tests/full_playback_v91.py
 ```
 
-The tests protect:
+Coverage protects:
 
-- radio verification/HLS behavior
+- Radio Browser verification/HLS behavior
 - pinned Popular radio structure
-- Aura Mode
-- player/radio loading states
+- Aura Mode and loading states
 - Konkani selection
-- v9 Music Graph entities
-- provider telemetry
-- official YouTube architecture
-- local playlist lifecycle
-- PWA shell assets
+- Music Graph entities/canonical matching
+- Source Pulse provider telemetry
+- YouTube secret gating
+- full-playback resolver query integrity and match-quality rules
+- visible official IFrame playback architecture
+- Auralis player-control bridge
+- playlist full-playback actions
+- PWA shell v14
 - no downloader-style YouTube integration
 - no duplicate enhancement boot
+
+## Security
+
+- API keys stay in Vercel environment variables.
+- `YOUTUBE_API_KEY` is consumed only by the serverless `/api/youtube` route.
+- The Google key should be restricted to **YouTube Data API v3**.
+- No secret is committed to the repository.
+- Browser code receives only resolved public video metadata.
 
 ## Safety / Project Hub boundary
 
@@ -430,26 +467,23 @@ Repository agents must read:
 
 No Auralis task may modify another application's schema, resources or deployment.
 
-## Important limitation
+## Limitations
 
-The goal is broad legitimate discovery and multiple playback routes — **not** to falsely promise that every copyrighted commercial recording can be anonymously streamed in full for free.
+Auralis aims for a practical music-player experience, not a claim that every copyrighted recording on Earth can be anonymously streamed.
 
-Auralis aims for:
-
-> almost any song should be discoverable, and as many as possible should resolve to a legitimate playback path.
-
-That is why provider capabilities and playback semantics are explicit.
+A full YouTube route depends on a suitable public video allowing embedding in the user's region. When no reliable match is available, Auralis should fail clearly rather than silently play an unrelated song.
 
 ## Roadmap
 
-The provider control plane is ready for the next activation steps:
+The current focus is to use v9.1 in real browsing and improve matching based on actual gaps. Future optional providers can then be activated only when they add meaningful coverage:
 
-1. official YouTube search + IFrame playback
-2. SoundCloud registered-app adapter
-3. Last.fm recommendations/charts
-4. Audiomack credentialed adapter
-5. optional Spotify / Apple Music connected accounts
-6. optional Supabase cloud playlists/likes/history
+1. SoundCloud registered-app adapter
+2. Last.fm recommendations/charts
+3. Audiomack credentialed adapter
+4. optional Spotify / Apple Music connected accounts
+5. optional Supabase cloud playlists/likes/history
+
+Quality > quantity: new providers should improve playback/discovery rather than simply increase the API count.
 
 ## License
 
