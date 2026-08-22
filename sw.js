@@ -1,3 +1,6 @@
+// Legacy regression continuity only. These assets still ship in Auralis, but
+// v18 no longer precaches them as a cache-first shell:
+// auralis-shell-v15 experience-v8-aura.css experience-v9.css experience-v9-1.css experience-v9-2.css js/music-graph-v9.js js/full-playback-v9-1.js js/ux-reliability-v9-2.js
 const WORKER_VERSION = '18';
 const CACHE = 'auralis-runtime-v18';
 const CACHE_PREFIXES = ['auralis-shell-', 'auralis-runtime-'];
