@@ -11,12 +11,13 @@
   const APP_URL = new URL(`app-v3.js?v=${encodeURIComponent(VERSION)}`, JS_ROOT).href;
   const ROW_TARGETS_URL = new URL(`row-play-targets.js?v=${encodeURIComponent(VERSION)}`, JS_ROOT).href;
   const WORKER_URL = new URL('../sw.js', JS_ROOT).href;
+  const DIRECT_APP_BOOT = [...document.scripts].some(script => /\/js\/app-v3\.js(?:[?#]|$)/.test(script.src || ''));
 
   let registration = null;
   let waitingWorker = null;
   let reloadArmed = false;
   let lastUpdateCheck = 0;
-  let appStarted = false;
+  let appStarted = DIRECT_APP_BOOT;
   let originalRegister = null;
 
   function safeStorageGet(storage, key) {
@@ -109,7 +110,7 @@
     let keys = [];
     try { keys = await caches.keys(); } catch { return; }
     await Promise.allSettled(keys
-      .filter(name => LEGACY_CACHE_PREFIXES.some(prefix => name.startsWith(prefix)))
+      .filter(name => LEGACY_CACHE_PREFIXES.some(prefix => name.startsWith(prefix)) && name !== `auralis-runtime-v${WORKER_VERSION}`)
       .map(name => caches.delete(name)));
   }
 
@@ -139,9 +140,7 @@
       safeStorageSet(localStorage, MIGRATION_KEY, VERSION);
 
       if (attempts > 2) {
-        const overlay = addStatusOverlay('The browser is still holding an older Auralis controller. Continue in online mode now; the worker will be installed again after this tab is clean.');
-        const strong = overlay.querySelector('strong');
-        if (strong) strong.textContent = 'Auralis recovered from a stubborn old worker';
+        safeStorageRemove(sessionStorage, MIGRATION_ATTEMPTS_KEY);
         removeStatusOverlay();
         return false;
       }
@@ -293,7 +292,11 @@
       }
     }
 
-    await startApplication();
+    if (!DIRECT_APP_BOOT) await startApplication();
+    else {
+      document.documentElement.dataset.auralisRuntime = VERSION;
+      safeStorageRemove(sessionStorage, MIGRATION_ATTEMPTS_KEY);
+    }
 
     if (document.readyState === 'complete') registerSafeWorker();
     else window.addEventListener('load', registerSafeWorker, { once: true });
@@ -302,12 +305,13 @@
   window.AuralisUpdateManagerV10 = {
     version: VERSION,
     workerVersion: WORKER_VERSION,
+    directBoot: DIRECT_APP_BOOT,
     checkForUpdate,
     activateUpdate: () => activateWaitingWorker(true)
   };
 
   boot().catch(error => {
     console.error('Auralis update manager failed', error);
-    startApplication();
+    if (!DIRECT_APP_BOOT) startApplication();
   });
 })();
