@@ -8,7 +8,7 @@ full = (root / 'js' / 'full-playback-v9-1.js').read_text()
 
 assert "import('./product-hotfix-v10-1-2.js')" in boot, 'final v10.1 video/artwork refinement must boot'
 assert boot.index("import('./product-polish-v10-1.js')") < boot.index("import('./product-hotfix-v10-1-2.js')"), 'hotfix must run after product polish'
-assert "const VERSION = '10.1.3'" in js, 'compact-player refinement version missing'
+assert "const VERSION = '10.1.4'" in js, 'artwork-stability hotfix version missing'
 
 # Full playback must not enlarge the Auralis bottom player.
 assert 'moveShellToInline' not in js, 'YouTube video must no longer be reparented into the bottom player'
@@ -24,8 +24,16 @@ assert 'v1013-video-hidden' in js and 'visibility:hidden!important' in css, 'hid
 assert "target.closest('#videoModeToggleV101')" in js and 'showVideo()' in js, 'Video control must restore/toggle the hidden window'
 assert 'YT.Player' in full, 'official YouTube iframe player must remain unchanged'
 
-# Poster fallback should try another exact canonical lookup before branded art remains.
-assert 'queryArtwork' in js and 'candidateScore' in js, 'second-pass poster recovery missing'
+# Play/pause must not rebuild the Trending grid and force every poster to reload.
+assert 'installTrendingGridGuard' in js, 'Trending artwork stability guard missing'
+assert "Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML')" in js, 'guard must preserve the existing Trending DOM during state-only renders'
+assert 'markTrendingPreserveWindow' in js and "event.target?.id === 'audio'" in js, 'audio play/pause must mark the preservation window'
+assert 'syncTrendingState' in js and 'cardSignature' in js, 'guard must update active/play state without replacing card artwork nodes'
+
+# Poster recovery should prefer real Audius artwork, then canonical catalog art, before branded fallback remains.
+assert 'queryAudiusArtwork' in js and 'audiusCandidates' in js, 'Audius artwork retry path missing'
+assert "art['480x480']" in js and "art['1000x1000']" in js and "art['150x150']" in js, 'Audius size fallbacks missing'
+assert 'queryArtwork' in js and 'candidateScore' in js, 'canonical poster recovery missing'
 assert 'artist:\\"' in js and 'track:\\"' in js, 'exact artist/track lookup missing'
 assert 'v1012-cover' in js and 'v1012-wave' in js and '--v1012-hue' in css, 'refined unique Auralis cover missing'
 assert 'font-size:9px' in css, 'fallback monogram must stay subtle rather than giant'
@@ -35,4 +43,4 @@ assert 'scanQueued' in js and 'requestAnimationFrame(runScan)' in js, 'hotfix sc
 assert 'localStorage.clear(' not in js and 'indexedDB.deleteDatabase(' not in js, 'hotfix must not wipe user data'
 assert "import('./update-manager-v10.js')" in boot, 'Stability v10 must remain active'
 
-print('Auralis v10.1.3 compact-player/video visibility tests passed')
+print('Auralis v10.1.4 artwork-stability/video visibility tests passed')
