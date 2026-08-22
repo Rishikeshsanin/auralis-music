@@ -3,8 +3,8 @@ import re, json
 
 root = Path(__file__).resolve().parents[1]
 required = [
-    'index.html','styles.css','fixes.css','experience.css','experience-v3.css','experience-v4.css','experience-v5.css','experience-v6.css','experience-v7.css','experience-v7-aura.css','experience-v8-aura.css','experience-v9.css',
-    'js/app-v3.js','js/row-play-targets.js','js/radio-reliability-v6.js','js/auralis-experience-v7.js','js/konkani-radio-v7.js','js/music-graph-v9.js','js/app-v2.js','js/store.js','js/fallback.js','js/collections.js','js/library-map.js',
+    'index.html','styles.css','fixes.css','experience.css','experience-v3.css','experience-v4.css','experience-v5.css','experience-v6.css','experience-v7.css','experience-v7-aura.css','experience-v8-aura.css','experience-v9.css','experience-v9-1.css',
+    'js/app-v3.js','js/row-play-targets.js','js/radio-reliability-v6.js','js/auralis-experience-v7.js','js/konkani-radio-v7.js','js/music-graph-v9.js','js/full-playback-v9-1.js','js/app-v2.js','js/store.js','js/fallback.js','js/collections.js','js/library-map.js',
     'js/providers/audius.js','js/providers/jamendo.js','js/providers/radio-browser.js',
     'js/providers/catalog-manager.js','api/radio.js','api/catalog.js','api/providers.js','api/youtube.js',
     'manifest.webmanifest','sw.js','vercel.json','AGENTS.md','SUPABASE_HUB_RULES.md'
@@ -39,6 +39,8 @@ v7_css = (root / 'experience-v7.css').read_text()
 v8_aura = (root / 'experience-v8-aura.css').read_text()
 v9_css = (root / 'experience-v9.css').read_text()
 v9_graph = (root / 'js/music-graph-v9.js').read_text()
+v91_css = (root / 'experience-v9-1.css').read_text()
+v91_playback = (root / 'js/full-playback-v9-1.js').read_text()
 sw = (root / 'sw.js').read_text()
 
 assert collections.count("id:'") >= 44, 'expected at least 44 curated collections'
@@ -78,13 +80,14 @@ assert '#radioActiveBlockV6 { order:-1; }' in v6_css and '#radioPopularBlockV5 {
 assert 'Aura Mode' in experience_v7 and 'AmchiKONKANI' in experience_v7, 'v7 Aura/Konkani enhancements missing'
 assert '.auralis-player-loading' in v7_css and '#radioTuningV7 { order:-2; }' in v7_css, 'v7 player/radio loading styling missing'
 assert '@property --aura-primary' in v8_aura and 'auraLiquidA' in v8_aura and 'html.aura-mode-on .hero' in v8_aura, 'v8 full-site Aura theme missing'
-assert "import('./music-graph-v9.js')" in konkani_v7, 'v9 layered boot missing'
+assert "import('./music-graph-v9.js')" in konkani_v7 and "import('./full-playback-v9-1.js')" in konkani_v7, 'v9/v9.1 layered boot missing'
 assert 'AURALIS MUSIC GRAPH' in v9_graph and 'v9-graph-card' in v9_css, 'v9 music graph UI missing'
-assert "auralis-shell-v13" in sw and 'experience-v8-aura.css' in sw and 'experience-v9.css' in sw and 'js/music-graph-v9.js' in sw, 'PWA v13 Music Graph shell missing'
+assert 'playFullTrack' in v91_playback and '.v91-playback-dock' in v91_css, 'v9.1 full playback layer missing'
+assert "auralis-shell-v14" in sw and 'experience-v8-aura.css' in sw and 'experience-v9.css' in sw and 'experience-v9-1.css' in sw and 'js/music-graph-v9.js' in sw and 'js/full-playback-v9-1.js' in sw, 'PWA v14 Full Playback shell missing'
 
 manifest = json.loads((root / 'manifest.webmanifest').read_text())
 assert manifest['name'] == 'Auralis Music'
 vercel = json.loads((root / 'vercel.json').read_text())
 assert 'headers' in vercel
 
-print('Auralis Music Graph v9 smoke tests passed')
+print('Auralis Full Playback v9.1 smoke tests passed')
