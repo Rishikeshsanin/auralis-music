@@ -21,7 +21,7 @@
   border-color:color-mix(in srgb,var(--accent,#8b5cf6) 42%,rgba(255,255,255,.1));
   background:color-mix(in srgb,var(--accent,#8b5cf6) 10%,rgba(255,255,255,.03));
 }
-#playerBar .player-controls .v1011-video-button.active {
+#playerBar .player-controls .v1011-video-button.v1011-open {
   color:#fff;
   border-color:color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 58%,rgba(255,255,255,.12));
   background:linear-gradient(135deg,color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 22%,rgba(255,255,255,.035)),rgba(255,255,255,.025));
@@ -47,26 +47,28 @@
 }
 .v1011-video-button small { font-size:9px; font-weight:850; letter-spacing:.05em; }
 
-/* Full playback no longer bursts open as a large floating popup. Until the
-   user explicitly opens Video, the official player is a tiny mini-player
-   attached visually to the transport area. */
+/* Full playback no longer opens as a large popup. The official YouTube player
+   rests in a simple Auralis dock attached to the bottom player. 320x200 keeps
+   the embedded viewport at/above YouTube's documented minimum in both axes. */
 body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open,
 .v91-playback-dock.v1011-docked.open {
-  right:134px;
-  bottom:88px;
+  right:18px;
+  bottom:calc(var(--player-h) + 8px);
   left:auto;
   top:auto;
-  width:190px;
-  height:107px;
-  min-width:190px;
-  min-height:107px;
+  width:320px;
+  height:200px;
+  min-width:320px;
+  min-height:200px;
   padding:0;
-  border-radius:15px;
+  border-radius:18px 18px 5px 5px;
   border:1px solid rgba(255,255,255,.1);
+  border-bottom-color:color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 22%,rgba(255,255,255,.1));
   overflow:hidden;
   opacity:1;
   transform:none;
-  box-shadow:0 16px 46px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.025) inset;
+  box-shadow:0 18px 54px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.025) inset;
+  background:#05060a;
 }
 body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open::before,
 .v91-playback-dock.v1011-docked.open::before,
@@ -80,24 +82,27 @@ body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open .v91-v
 .v91-playback-dock.v1011-docked.open .v91-video-shell {
   width:100%;
   height:100%;
-  min-height:100%;
+  min-height:200px;
   border:0;
-  border-radius:14px;
+  border-radius:17px 17px 4px 4px;
   box-shadow:none;
 }
 body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91,
 body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91>div,
 body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91 iframe {
-  min-height:107px !important;
+  width:100%!important;
+  height:200px!important;
+  min-width:200px!important;
+  min-height:200px!important;
 }
 
 /* Explicit expanded state: floating, draggable, resizable, with position kept
    inside the viewport. */
 .v91-playback-dock.v1011-expanded.open {
-  width:min(460px,calc(100vw - 28px));
-  height:360px;
+  width:min(480px,calc(100vw - 28px));
+  height:380px;
   min-width:340px;
-  min-height:270px;
+  min-height:300px;
   max-width:calc(100vw - 20px);
   max-height:calc(100vh - 104px);
   resize:both;
@@ -115,13 +120,13 @@ body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91 iframe 
 .v91-playback-dock.v1011-expanded.v1011-dragging .v91-dock-head { cursor:grabbing; }
 .v91-playback-dock.v1011-expanded .v91-video-shell {
   height:calc(100% - 98px);
-  min-height:168px;
+  min-height:200px;
 }
 .v91-playback-dock.v1011-expanded #youtubePlayerMountV91,
 .v91-playback-dock.v1011-expanded #youtubePlayerMountV91>div,
 .v91-playback-dock.v1011-expanded #youtubePlayerMountV91 iframe {
   height:100%!important;
-  min-height:100%!important;
+  min-height:200px!important;
 }
 .v91-dock-head .v1011-minimize-video {
   margin-left:auto;
@@ -321,25 +326,31 @@ body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91 iframe 
   #playerBar .player-controls .v1011-video-button small { display:none; }
   body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open,
   .v91-playback-dock.v1011-docked.open {
-    right:82px;
-    bottom:137px;
-    width:158px;
-    height:89px;
-    min-width:158px;
-    min-height:89px;
+    right:10px;
+    bottom:calc(var(--player-h) + 70px);
+    width:220px;
+    height:200px;
+    min-width:220px;
+    min-height:200px;
+    border-radius:16px;
   }
   body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91,
   body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91>div,
-  body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91 iframe { min-height:89px!important; }
+  body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91 iframe {
+    width:220px!important;
+    height:200px!important;
+    min-width:200px!important;
+    min-height:200px!important;
+  }
   .v91-playback-dock.v1011-expanded.open {
     left:10px!important;
     right:10px!important;
     top:auto!important;
-    bottom:142px!important;
+    bottom:calc(var(--player-h) + 70px)!important;
     width:calc(100vw - 20px)!important;
-    height:min(360px,calc(100vh - 170px))!important;
+    height:min(380px,calc(100vh - 170px))!important;
     min-width:0;
-    min-height:250px;
+    min-height:300px;
     resize:none;
   }
   .v91-playback-dock.v1011-expanded .v91-dock-head { cursor:default; }
