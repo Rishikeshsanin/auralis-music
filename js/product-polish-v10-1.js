@@ -1,10 +1,9 @@
 (() => {
   const VERSION = '10.1.1';
-  const PLAYLIST_KEY = 'auralis:playlists:v2';
   const VIDEO_LAYOUT_KEY = 'auralis:video-layout:v1011';
   const ART_HOST_SELECTOR = '.cover-wrap,.row-cover,.queue-item-cover,.player-cover,.v9-graph-art,.v9-detail-art,.v101-liked-art,.v91-now-art';
-  const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const $ = (selector, root = document) => root?.querySelector?.(selector) || null;
+  const $$ = (selector, root = document) => root?.querySelectorAll ? [...root.querySelectorAll(selector)] : [];
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
@@ -15,9 +14,9 @@
     dragging: false,
     dragX: 0,
     dragY: 0,
+    scanQueued: false,
     artworkCache: new Map(),
-    artworkPending: new Set(),
-    scanQueued: false
+    artworkPending: new WeakSet()
   };
 
   function toast(title, detail = '') {
@@ -41,8 +40,8 @@
 
   function loadVideoLayout() {
     try {
-      const value = JSON.parse(localStorage.getItem(VIDEO_LAYOUT_KEY) || '{}');
-      return value && typeof value === 'object' ? value : {};
+      const parsed = JSON.parse(localStorage.getItem(VIDEO_LAYOUT_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
     } catch {
       return {};
     }
@@ -54,22 +53,24 @@
     const rect = dock.getBoundingClientRect();
     try {
       localStorage.setItem(VIDEO_LAYOUT_KEY, JSON.stringify({
-        left: Math.round(rect.left),
-        top: Math.round(rect.top),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height)
+        left: Math.round(rect.left), top: Math.round(rect.top),
+        width: Math.round(rect.width), height: Math.round(rect.height)
       }));
     } catch {}
+  }
+
+  function resetDockInlineLayout() {
+    const dock = $('#fullPlaybackDockV91');
+    if (!dock) return;
+    ['left','top','right','bottom','width','height'].forEach(prop => dock.style.removeProperty(prop));
   }
 
   function clampDock() {
     const dock = $('#fullPlaybackDockV91');
     if (!dock || !state.expandedVideo || window.innerWidth <= 760) return;
     const rect = dock.getBoundingClientRect();
-    const maxLeft = Math.max(10, window.innerWidth - rect.width - 10);
-    const maxTop = Math.max(10, window.innerHeight - rect.height - 94);
-    const left = Math.min(maxLeft, Math.max(10, rect.left));
-    const top = Math.min(maxTop, Math.max(10, rect.top));
+    const left = Math.min(Math.max(10, window.innerWidth - rect.width - 10), Math.max(10, rect.left));
+    const top = Math.min(Math.max(10, window.innerHeight - rect.height - 94), Math.max(10, rect.top));
     dock.style.left = `${left}px`;
     dock.style.top = `${top}px`;
     dock.style.right = 'auto';
@@ -89,20 +90,17 @@
     requestAnimationFrame(clampDock);
   }
 
-  function resetDockInlineLayout() {
-    const dock = $('#fullPlaybackDockV91');
-    if (!dock) return;
-    ['left', 'top', 'right', 'bottom', 'width', 'height'].forEach(prop => dock.style.removeProperty(prop));
-  }
-
   function ensureVideoButtonPlacement() {
     const button = $('#videoModeToggleV101');
     const repeat = $('#repeatButton');
     if (!button || !repeat) return;
     if (button.previousElementSibling !== repeat) repeat.after(button);
-    button.classList.add('v1011-video-button');
-    button.innerHTML = '<span class="v1011-video-glyph" aria-hidden="true"><i></i></span><small>Video</small>';
-    button.setAttribute('aria-label', 'Open video player');
+    if (button.dataset.v1011Decorated !== 'true') {
+      button.dataset.v1011Decorated = 'true';
+      button.classList.add('v1011-video-button');
+      button.innerHTML = '<span class="v1011-video-glyph" aria-hidden="true"><i></i></span><small>Video</small>';
+      button.setAttribute('aria-label', 'Open video player');
+    }
   }
 
   function ensureDockControls() {
@@ -125,21 +123,21 @@
     ensureDockControls();
     const dock = $('#fullPlaybackDockV91');
     const button = $('#videoModeToggleV101');
-    const full = window.AuralisFullPlaybackV91?.state;
-    const active = Boolean(full?.active);
+    const active = Boolean(window.AuralisFullPlaybackV91?.state?.active);
 
+    if (!active && dock && !dock.classList.contains('open')) state.expandedVideo = false;
     document.body.classList.add('v1011-video-ready');
     document.body.classList.toggle('v1011-video-expanded', state.expandedVideo && active);
     document.body.classList.toggle('v1011-video-docked', !state.expandedVideo && active);
     document.body.classList.remove('v101-video-mode-off');
 
     if (button) {
-      button.classList.toggle('active', state.expandedVideo && active);
+      button.classList.toggle('v1011-open', state.expandedVideo && active);
       button.classList.toggle('playing-video', active);
       button.setAttribute('aria-pressed', String(state.expandedVideo && active));
       button.title = active
         ? (state.expandedVideo ? 'Minimize video player' : 'Open movable video player')
-        : 'Video player becomes available during full playback';
+        : 'Video becomes available during full playback';
     }
 
     if (!dock) return;
@@ -151,7 +149,7 @@
   function setVideoExpanded(expanded, announce = true) {
     const active = Boolean(window.AuralisFullPlaybackV91?.state?.active);
     if (expanded && !active) {
-      if (announce) toast('Video is ready when a full song is playing', 'Start Full song first, then open Video.');
+      if (announce) toast('Video becomes available with Full song', 'Start a full song, then open Video.');
       return;
     }
     state.expandedVideo = Boolean(expanded && active);
@@ -160,14 +158,13 @@
     if (state.expandedVideo) {
       applySavedVideoLayout();
       if (announce) toast('Video player opened', 'Drag the header to move it. Resize from the lower-right corner.');
-    } else if (announce && active) {
+    } else if (active && announce) {
       toast('Video minimized', 'Playback continues in the compact player beside the controls.');
     }
   }
 
   function beginDrag(event) {
-    if (!state.expandedVideo || window.innerWidth <= 760 || event.button !== 0) return;
-    if (event.target.closest('button,input,a')) return;
+    if (!state.expandedVideo || window.innerWidth <= 760 || event.button !== 0 || event.target.closest('button,input,a')) return;
     const dock = $('#fullPlaybackDockV91');
     if (!dock) return;
     const rect = dock.getBoundingClientRect();
@@ -183,10 +180,8 @@
     const dock = $('#fullPlaybackDockV91');
     if (!dock) return;
     const rect = dock.getBoundingClientRect();
-    const maxLeft = Math.max(10, window.innerWidth - rect.width - 10);
-    const maxTop = Math.max(10, window.innerHeight - rect.height - 94);
-    const left = Math.min(maxLeft, Math.max(10, event.clientX - state.dragX));
-    const top = Math.min(maxTop, Math.max(10, event.clientY - state.dragY));
+    const left = Math.min(Math.max(10, window.innerWidth - rect.width - 10), Math.max(10, event.clientX - state.dragX));
+    const top = Math.min(Math.max(10, window.innerHeight - rect.height - 94), Math.max(10, event.clientY - state.dragY));
     dock.style.left = `${left}px`;
     dock.style.top = `${top}px`;
     dock.style.right = 'auto';
@@ -204,7 +199,7 @@
     const dialog = $('#playlistDialogV9');
     const form = $('#playlistFormV9');
     if (!dialog || !form) return;
-    dialog.classList.add('v1011-playlist-dialog');
+    if (!dialog.classList.contains('v1011-playlist-dialog')) dialog.classList.add('v1011-playlist-dialog');
 
     const heading = $('.v9-dialog-head > div', form);
     if (heading && !$('.v1011-playlist-mark', heading)) {
@@ -212,9 +207,9 @@
     }
 
     $$('button[value="cancel"],.v9-dialog-head .icon-button', form).forEach(button => {
-      button.type = 'button';
+      if (button.type !== 'button') button.type = 'button';
       button.formNoValidate = true;
-      if (button.dataset.v1011CancelBound) return;
+      if (button.dataset.v1011CancelBound === 'true') return;
       button.dataset.v1011CancelBound = 'true';
       button.addEventListener('click', event => {
         event.preventDefault();
@@ -223,7 +218,7 @@
       }, true);
     });
 
-    if (!dialog.dataset.v1011CancelBound) {
+    if (dialog.dataset.v1011CancelBound !== 'true') {
       dialog.dataset.v1011CancelBound = 'true';
       dialog.addEventListener('cancel', event => {
         event.preventDefault();
@@ -233,23 +228,23 @@
   }
 
   function polishPlaylistEntryPoints() {
-    const button = $('#newPlaylistButton');
-    if (button && !button.dataset.v1011Polished) {
-      button.dataset.v1011Polished = 'true';
-      button.innerHTML = '<span class="v1011-list-icon" aria-hidden="true"><i></i><i></i><i></i></span><span>Create playlist</span>';
-      button.title = 'Create an Auralis playlist';
+    const sidebar = $('#newPlaylistButton');
+    if (sidebar && sidebar.dataset.v1011Polished !== 'true') {
+      sidebar.dataset.v1011Polished = 'true';
+      sidebar.innerHTML = '<span class="v1011-list-icon" aria-hidden="true"><i></i><i></i><i></i></span><span>Create playlist</span>';
+      sidebar.title = 'Create an Auralis playlist';
     }
     const universe = $('#createGraphPlaylist');
-    if (universe && !universe.dataset.v1011Polished) {
+    if (universe && universe.dataset.v1011Polished !== 'true') {
       universe.dataset.v1011Polished = 'true';
       universe.innerHTML = '<span class="v1011-inline-list" aria-hidden="true">☰</span> Create playlist';
     }
   }
 
-  function removePreviewPosterBadges() {
+  function polishPreviewLabels() {
     $$('.v9-graph-card').forEach(card => {
       const badge = $('.v9-graph-art i', card);
-      if (badge && /30\s*s\s*preview/i.test(clean(badge.textContent))) {
+      if (badge && /30\s*s\s*preview/i.test(clean(badge.textContent)) && !badge.classList.contains('v1011-preview-badge-removed')) {
         badge.classList.add('v1011-preview-badge-removed');
         badge.setAttribute('aria-hidden', 'true');
       }
@@ -265,125 +260,113 @@
   function graphTrackFromArtistRow(row, artistName) {
     const title = clean($('strong', row)?.textContent);
     const album = clean($('small', row)?.textContent);
-    const artwork = $('.v9-detail-art img', row.closest('#graphModalBodyV9'))?.currentSrc || $('.v9-detail-art img', row.closest('#graphModalBodyV9'))?.src || '';
-    return {
-      id: `artist:${clean(artistName).toLowerCase()}:${title.toLowerCase()}`,
-      graphId: `artist:${clean(artistName).toLowerCase()}:${title.toLowerCase()}`,
-      kind: 'track',
-      title,
-      artist: clean(artistName),
-      album,
-      artwork,
-      provider: 'YouTube',
-      playbackMode: 'youtube'
-    };
+    const body = row.closest('#graphModalBodyV9');
+    const artwork = $('.v9-detail-art img', body)?.currentSrc || $('.v9-detail-art img', body)?.src || '';
+    const id = `artist:${clean(artistName).toLowerCase()}:${title.toLowerCase()}`;
+    return { id, graphId:id, kind:'track', title, artist:clean(artistName), album, artwork, provider:'YouTube', playbackMode:'youtube' };
   }
 
   function artistTracks() {
     const body = $('#graphModalBodyV9');
-    const kicker = clean($('.v9-detail-hero .eyebrow', body)?.textContent).toUpperCase();
-    if (kicker !== 'ARTIST') return [];
-    const artistName = clean($('.v9-detail-hero h2', body)?.textContent || $('#graphModalTitleV9')?.textContent);
-    return $$('.v9-album-tracks .v9-album-row', body)
-      .map(row => graphTrackFromArtistRow(row, artistName))
-      .filter(track => track.title && track.artist);
+    if (clean($('.v9-detail-hero .eyebrow', body)?.textContent).toUpperCase() !== 'ARTIST') return [];
+    const artist = clean($('.v9-detail-hero h2', body)?.textContent || $('#graphModalTitleV9')?.textContent);
+    return $$('.v9-album-tracks .v9-album-row', body).map(row => graphTrackFromArtistRow(row, artist)).filter(track => track.title && track.artist);
   }
 
   function ensureArtistMix() {
     const body = $('#graphModalBodyV9');
-    if (!body || !artistTracks().length || $('.v1011-artist-mix', body)) return;
+    const tracks = artistTracks();
+    if (!body || !tracks.length || $('.v1011-artist-mix', body)) return;
     const anchor = $('.v9-stat-row', body) || $('.v9-detail-hero', body);
     if (!anchor) return;
     const bar = document.createElement('div');
     bar.className = 'v1011-artist-mix';
-    bar.innerHTML = '<div><span class="v1011-list-icon" aria-hidden="true"><i></i><i></i><i></i></span><div><strong>Artist mix</strong><small>Play or queue the top tracks as one Auralis sequence.</small></div></div><div><button type="button" data-v1011-artist-play>▶ Play mix</button><button type="button" data-v1011-artist-queue>＋ Queue mix</button></div>';
+    bar.innerHTML = '<div><span class="v1011-list-icon" aria-hidden="true"><i></i><i></i><i></i></span><div><strong>Artist playlist</strong><small>Play or queue the top tracks as one Auralis sequence.</small></div></div><div><button type="button" data-v1011-artist-play>▶ Play mix</button><button type="button" data-v1011-artist-queue>＋ Queue mix</button></div>';
     anchor.after(bar);
 
-    $('[data-v1011-artist-play]', bar)?.addEventListener('click', async () => {
-      const tracks = artistTracks();
-      if (!tracks.length) return;
+    $('[data-v1011-artist-play]', bar)?.addEventListener('click', () => {
+      const next = artistTracks();
       const full = window.AuralisFullPlaybackV91;
-      if (!full?.play) {
-        toast('Full playback is still loading', 'Try the artist mix again in a moment.');
+      if (!next.length || !full?.play) {
+        toast('Artist playlist is still loading', 'Try again in a moment.');
         return;
       }
-      full.state.queue = tracks;
+      full.state.queue = next;
       full.state.index = 0;
-      full.play(tracks[0]);
-      toast('Artist mix started', `${tracks[0].artist} · ${tracks.length} top tracks`);
+      full.play(next[0]);
+      toast('Artist playlist started', `${next[0].artist} · ${next.length} top tracks`);
     });
 
     $('[data-v1011-artist-queue]', bar)?.addEventListener('click', () => {
-      const tracks = artistTracks();
-      if (!tracks.length || !window.AuralisPlayerUniverseV101?.addToQueue) return;
-      tracks.slice(0, 10).forEach(track => window.AuralisPlayerUniverseV101.addToQueue(track));
-      toast('Artist mix queued', `${tracks.length} top tracks are ready in Queue.`);
+      const next = artistTracks();
+      const api = window.AuralisPlayerUniverseV101;
+      if (!next.length || !api?.addToQueue) return;
+      next.slice(0, 10).forEach(track => api.addToQueue(track));
+      toast('Artist playlist queued', `${Math.min(next.length, 10)} top tracks are ready in Queue.`);
     });
   }
 
+  function visibleHost(host) {
+    const view = host.closest('.view');
+    if (view && !view.classList.contains('active-view')) return false;
+    const modal = host.closest('.v9-modal');
+    if (modal && !modal.classList.contains('open')) return false;
+    return true;
+  }
+
   function identityForHost(host) {
-    const owner = host.closest('.music-card,.track-row,.queue-item,.player,.v9-graph-card,.v9-album-row,.v9-playlist-row,.v101-liked-row,.v91-playback-dock');
-    if (!owner) return { title: '', artist: '' };
-    if (owner.classList.contains('music-card')) return { title: clean($('h3', owner)?.textContent), artist: clean($('p', owner)?.textContent) };
-    if (owner.classList.contains('track-row')) return { title: clean($('.row-title-copy strong', owner)?.textContent), artist: clean($('.row-title-copy span', owner)?.textContent) };
-    if (owner.classList.contains('queue-item')) return { title: clean($('.queue-item-copy strong', owner)?.textContent), artist: clean(($('.queue-item-copy span', owner)?.textContent || '').split(' · ')[0]) };
-    if (owner.classList.contains('player')) return { title: clean($('#playerTitle')?.textContent), artist: clean($('#playerArtist')?.textContent) };
-    if (owner.classList.contains('v9-graph-card')) {
-      const parts = clean($('.v9-graph-copy > span', owner)?.textContent).split(' · ');
-      return { title: clean($('.v9-graph-copy > strong', owner)?.textContent), artist: parts[0] || '' };
+    const owner = host.closest('.music-card,.track-row,.queue-item,.player,.v9-graph-card,.v9-detail-hero,.v9-album-row,.v9-playlist-row,.v101-liked-row,.v91-playback-dock');
+    if (!owner) return { title:'', artist:'' };
+    if (owner.classList.contains('music-card')) return { title:clean($('h3', owner)?.textContent), artist:clean($('p', owner)?.textContent) };
+    if (owner.classList.contains('track-row')) return { title:clean($('.row-title-copy strong', owner)?.textContent), artist:clean($('.row-title-copy span', owner)?.textContent) };
+    if (owner.classList.contains('queue-item')) return { title:clean($('.queue-item-copy strong', owner)?.textContent), artist:clean(($('.queue-item-copy span', owner)?.textContent || '').split(' · ')[0]) };
+    if (owner.classList.contains('player')) return { title:clean($('#playerTitle')?.textContent), artist:clean($('#playerArtist')?.textContent) };
+    if (owner.classList.contains('v9-graph-card')) return { title:clean($('.v9-graph-copy > strong', owner)?.textContent), artist:clean(($('.v9-graph-copy > span', owner)?.textContent || '').split(' · ')[0]) };
+    if (owner.classList.contains('v9-detail-hero')) {
+      const line = clean($('h2', owner)?.nextElementSibling?.textContent).split(' · ');
+      return { title:clean($('h2', owner)?.textContent), artist:line[0] || '' };
     }
     if (owner.classList.contains('v9-album-row') || owner.classList.contains('v9-playlist-row')) {
       const body = owner.closest('#graphModalBodyV9');
       const kicker = clean($('.v9-detail-hero .eyebrow', body)?.textContent).toUpperCase();
       const modalTitle = clean($('.v9-detail-hero h2', body)?.textContent || $('#graphModalTitleV9')?.textContent);
-      const secondary = clean($('small', owner)?.textContent);
-      return {
-        title: clean($('strong', owner)?.textContent),
-        artist: kicker === 'ARTIST' ? modalTitle : secondary
-      };
+      return { title:clean($('strong', owner)?.textContent), artist:kicker === 'ARTIST' ? modalTitle : clean($('small', owner)?.textContent) };
     }
-    if (owner.classList.contains('v101-liked-row')) return { title: clean($('strong', owner)?.textContent), artist: clean($('span', owner)?.textContent) };
-    return { title: clean($('#fullPlaybackTitleV91')?.textContent), artist: clean($('#fullPlaybackArtistV91')?.textContent) };
+    if (owner.classList.contains('v101-liked-row')) return { title:clean($('strong', owner)?.textContent), artist:clean($('span', owner)?.textContent) };
+    return { title:clean($('#fullPlaybackTitleV91')?.textContent), artist:clean($('#fullPlaybackArtistV91')?.textContent) };
   }
 
-  function artKey(identity) {
-    return `${clean(identity.title).toLowerCase()}::${clean(identity.artist).toLowerCase()}`;
-  }
-
-  function exactish(value) {
-    return clean(value).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  function normalized(value) {
+    return clean(value).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
   }
 
   function chooseArtwork(items, identity) {
-    const wantedTitle = exactish(identity.title);
-    const wantedArtist = exactish(identity.artist);
-    return (items || [])
-      .map(item => {
-        const title = exactish(item.title);
-        const artist = exactish(item.artist);
-        let score = title === wantedTitle ? 20 : title.includes(wantedTitle) || wantedTitle.includes(title) ? 10 : 0;
-        if (artist === wantedArtist) score += 14;
-        else if (artist && wantedArtist && (artist.includes(wantedArtist) || wantedArtist.includes(artist))) score += 7;
-        const artwork = clean(item.artwork || item.artworkFallback || '');
-        if (artwork) score += 3;
-        return { artwork, score };
-      })
-      .filter(entry => entry.artwork && entry.score >= 20)
-      .sort((a, b) => b.score - a.score)[0]?.artwork || '';
+    const wantedTitle = normalized(identity.title);
+    const wantedArtist = normalized(identity.artist);
+    return (items || []).map(item => {
+      const title = normalized(item.title);
+      const artist = normalized(item.artist);
+      let score = title === wantedTitle ? 20 : (title.includes(wantedTitle) || wantedTitle.includes(title) ? 10 : 0);
+      if (artist === wantedArtist) score += 14;
+      else if (artist && wantedArtist && (artist.includes(wantedArtist) || wantedArtist.includes(artist))) score += 7;
+      const artwork = clean(item.artwork || item.artworkFallback || '');
+      if (artwork) score += 3;
+      return { artwork, score };
+    }).filter(entry => entry.artwork && entry.score >= 20).sort((a,b) => b.score - a.score)[0]?.artwork || '';
   }
 
   async function canonicalArtwork(identity) {
-    const key = artKey(identity);
     if (!identity.title || !identity.artist) return '';
+    const key = `${normalized(identity.title)}::${normalized(identity.artist)}`;
     if (state.artworkCache.has(key)) return state.artworkCache.get(key);
     const request = (async () => {
       try {
         const url = new URL('/api/catalog', location.origin);
-        url.searchParams.set('mode', 'search');
-        url.searchParams.set('kind', 'track');
-        url.searchParams.set('q', `${identity.title} ${identity.artist}`);
-        url.searchParams.set('limit', '8');
-        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        url.searchParams.set('mode','search');
+        url.searchParams.set('kind','track');
+        url.searchParams.set('q',`${identity.title} ${identity.artist}`);
+        url.searchParams.set('limit','8');
+        const response = await fetch(url, { headers:{ Accept:'application/json' } });
         if (!response.ok) return '';
         const json = await response.json();
         return chooseArtwork(json.items || [], identity);
@@ -395,13 +378,19 @@
     return request;
   }
 
-  function ensureBrandedFallback(host, identity) {
+  function removeLegacyFallbacks(host) {
+    $$('.cover-fallback,.auralis-art-fallback-v92,.v1011-branded-art', host).forEach(node => node.remove());
+    if (host.classList.contains('row-cover') || host.classList.contains('v9-graph-art')) {
+      $$(':scope > span', host).forEach(node => node.remove());
+    }
+  }
+
+  function brandedFallback(host, identity) {
     if (!host || $('.v1011-branded-art', host)) return;
-    const title = clean(identity.title);
-    const letter = (title.match(/[\p{L}\p{N}]/u)?.[0] || 'A').toLocaleUpperCase();
+    const letter = (clean(identity.title).match(/[\p{L}\p{N}]/u)?.[0] || 'A').toLocaleUpperCase();
     const fallback = document.createElement('span');
     fallback.className = 'v1011-branded-art';
-    fallback.setAttribute('aria-hidden', 'true');
+    fallback.setAttribute('aria-hidden','true');
     fallback.innerHTML = `<i>A</i><b>${escapeHtml(letter)}</b><small>AURALIS</small>`;
     host.prepend(fallback);
     host.classList.add('v1011-art-fallback-active');
@@ -409,52 +398,53 @@
 
   function installArtwork(host, url, identity) {
     if (!host || !url) return;
-    let img = $('img', host);
-    if (!img) {
-      img = document.createElement('img');
-      img.alt = `${identity.title || 'Track'} artwork`;
-      img.loading = 'lazy';
-      img.referrerPolicy = 'no-referrer';
-      const badge = $('.provider-badge', host);
-      if (badge) badge.after(img);
-      else host.prepend(img);
-    }
-    img.style.display = '';
-    img.removeAttribute('onerror');
-    img.dataset.v1011Recovering = 'true';
+    $('img', host)?.remove();
+    const img = document.createElement('img');
+    img.alt = `${identity.title || 'Track'} artwork`;
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
     img.addEventListener('load', () => {
-      host.classList.remove('image-failed', 'auralis-art-failed-v92', 'v1011-art-fallback-active');
-      $('.v1011-branded-art', host)?.remove();
-      img.dataset.v1011Recovering = 'false';
-    }, { once: true });
+      removeLegacyFallbacks(host);
+      host.classList.remove('image-failed','no-art','auralis-art-failed-v92','v1011-art-fallback-active');
+      host.dataset.v1011ArtChecked = 'true';
+    }, { once:true });
     img.addEventListener('error', () => {
-      img.dataset.v1011Recovering = 'false';
       img.remove();
-      ensureBrandedFallback(host, identity);
-    }, { once: true });
+      brandedFallback(host, identity);
+      host.dataset.v1011ArtChecked = 'true';
+    }, { once:true });
+    host.prepend(img);
     img.src = url;
   }
 
   async function recoverArtworkHost(host) {
-    if (!host || host.dataset.v1011ArtChecked === 'true' || state.artworkPending.has(host)) return;
-    const image = $('img', host);
-    if (image?.complete && image.naturalWidth && image.style.display !== 'none') {
+    if (!host || !visibleHost(host) || host.dataset.v1011ArtChecked === 'true' || state.artworkPending.has(host)) return;
+    const img = $('img', host);
+    if (img?.complete && img.naturalWidth && img.style.display !== 'none') {
       host.dataset.v1011ArtChecked = 'true';
       return;
     }
     const identity = identityForHost(host);
     if (!identity.title) return;
+
+    if (img && !img.complete) {
+      if (img.dataset.v1011Watch !== 'true') {
+        img.dataset.v1011Watch = 'true';
+        img.addEventListener('load', () => { host.dataset.v1011ArtChecked = 'true'; }, { once:true });
+        img.addEventListener('error', () => { host.dataset.v1011ArtChecked = 'false'; scheduleScan(); }, { once:true });
+      }
+      return;
+    }
+
     state.artworkPending.add(host);
     try {
-      if (image && !image.complete) {
-        image.addEventListener('load', () => { host.dataset.v1011ArtChecked = 'true'; }, { once: true });
-        image.addEventListener('error', () => { host.dataset.v1011ArtChecked = 'false'; scheduleScan(); }, { once: true });
-        return;
-      }
       const artwork = identity.artist ? await canonicalArtwork(identity) : '';
-      if (artwork && host.isConnected) installArtwork(host, artwork, identity);
-      else if (host.isConnected) ensureBrandedFallback(host, identity);
-      host.dataset.v1011ArtChecked = 'true';
+      if (!host.isConnected) return;
+      if (artwork) installArtwork(host, artwork, identity);
+      else {
+        brandedFallback(host, identity);
+        host.dataset.v1011ArtChecked = 'true';
+      }
     } finally {
       state.artworkPending.delete(host);
     }
@@ -462,8 +452,9 @@
 
   function scanArtwork() {
     $$(ART_HOST_SELECTOR).forEach(host => {
+      if (!visibleHost(host)) return;
       const img = $('img', host);
-      if (img && !img.dataset.v1011ErrorBound) {
+      if (img && img.dataset.v1011ErrorBound !== 'true') {
         img.dataset.v1011ErrorBound = 'true';
         img.addEventListener('error', () => {
           host.dataset.v1011ArtChecked = 'false';
@@ -480,7 +471,7 @@
     polishPlaylistEntryPoints();
     ensureVideoButtonPlacement();
     ensureDockControls();
-    removePreviewPosterBadges();
+    polishPreviewLabels();
     ensureArtistMix();
     scanArtwork();
     syncVideoPresentation();
@@ -493,16 +484,13 @@
   }
 
   function captureClicks(event) {
-    const video = event.target.closest('#videoModeToggleV101');
-    if (video) {
+    if (event.target.closest('#videoModeToggleV101')) {
       event.preventDefault();
       event.stopImmediatePropagation();
       setVideoExpanded(!state.expandedVideo);
       return;
     }
-
-    const minimize = event.target.closest('#minimizeVideoV1011');
-    if (minimize) {
+    if (event.target.closest('#minimizeVideoV1011')) {
       event.preventDefault();
       event.stopImmediatePropagation();
       setVideoExpanded(false);
@@ -516,43 +504,32 @@
     polish();
 
     const observer = new MutationObserver(scheduleScan);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-
+    observer.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
     document.addEventListener('click', captureClicks, true);
     document.addEventListener('pointerdown', event => {
       if (event.target.closest('#fullPlaybackDockV91 .v91-dock-head')) beginDrag(event);
     }, true);
-    window.addEventListener('pointermove', moveDrag, { passive: true });
-    window.addEventListener('pointerup', endDrag, { passive: true });
-    window.addEventListener('resize', () => {
-      clampDock();
-      scheduleScan();
-    });
+    window.addEventListener('pointermove', moveDrag, { passive:true });
+    window.addEventListener('pointerup', endDrag, { passive:true });
+    window.addEventListener('resize', () => { clampDock(); scheduleScan(); });
 
     if ('ResizeObserver' in window) {
-      let timer = null;
-      const resizeObserver = new ResizeObserver(() => {
-        if (!state.expandedVideo || state.dragging) return;
-        clearTimeout(timer);
-        timer = setTimeout(() => { clampDock(); saveVideoLayout(); }, 180);
-      });
+      let saveTimer = null;
       const dock = $('#fullPlaybackDockV91');
-      if (dock) resizeObserver.observe(dock);
+      if (dock) {
+        const resizeObserver = new ResizeObserver(() => {
+          if (!state.expandedVideo || state.dragging) return;
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(() => { clampDock(); saveVideoLayout(); }, 180);
+        });
+        resizeObserver.observe(dock);
+      }
     }
 
-    setInterval(() => {
-      if (!window.AuralisFullPlaybackV91?.state?.active && state.expandedVideo) state.expandedVideo = false;
-      syncVideoPresentation();
-    }, 500);
-
-    window.AuralisProductPolishV1011 = {
-      version: VERSION,
-      setVideoExpanded,
-      repairArtwork: scanArtwork,
-      artistTracks
-    };
+    setInterval(syncVideoPresentation, 500);
+    window.AuralisProductPolishV1011 = { version:VERSION, setVideoExpanded, repairArtwork:scanArtwork, artistTracks };
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
   else start();
 })();
