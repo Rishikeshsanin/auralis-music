@@ -76,7 +76,7 @@ assert 'prefers-reduced-motion' in css, 'Reduced-motion support missing'
 assert 'v9-provider-row' in css and 'v9-graph-card' in css and 'v9-playlist-card' in css, 'v9 major surfaces not styled'
 
 # PWA shell
-assert "auralis-shell-v13" in sw, 'PWA cache was not bumped to v13'
+assert "auralis-shell-v14" in sw, 'PWA cache was not bumped to v14'
 assert './experience-v9.css' in sw and './js/music-graph-v9.js' in sw, 'v9 shell assets missing from PWA cache'
 
 print('Auralis Music Graph v9 regression tests passed')
