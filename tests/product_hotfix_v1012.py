@@ -6,15 +6,22 @@ css = (root / 'experience-v10-1-hotfix.css').read_text()
 boot = (root / 'js' / 'konkani-radio-v7.js').read_text()
 full = (root / 'js' / 'full-playback-v9-1.js').read_text()
 
-assert "import('./product-hotfix-v10-1-2.js')" in boot, 'v10.1.2 refinement must boot'
+assert "import('./product-hotfix-v10-1-2.js')" in boot, 'final v10.1 video/artwork refinement must boot'
 assert boot.index("import('./product-polish-v10-1.js')") < boot.index("import('./product-hotfix-v10-1-2.js')"), 'hotfix must run after product polish'
+assert "const VERSION = '10.1.3'" in js, 'compact-player refinement version missing'
 
-# Minimized playback is integrated into the Auralis player, not left as a floating dock.
-assert 'inlineVideoSlotV1012' in js and 'moveShellToInline' in js and 'moveShellToDock' in js, 'inline video reparenting missing'
-assert 'v1012-inline-video-active' in js and 'v1012-inline-video-slot' in css, 'inline video state missing'
-assert 'visibility:hidden!important' in css and 'v91-playback-dock' in css, 'legacy minimized floating dock must be non-visual'
-assert "target.closest('#videoModeToggleV101')" in js and 'setVideoExpanded(!expanded, false)' in js, 'Video control must explicitly open floating mode without toast spam'
-assert 'setVideoExpanded(false, false)' in js, 'minimize must return to integrated mode quietly'
+# Full playback must not enlarge the Auralis bottom player.
+assert 'moveShellToInline' not in js, 'YouTube video must no longer be reparented into the bottom player'
+assert '--player-h:220px' not in css and '--player-h:272px' not in css, 'full playback must never enlarge the player bar'
+assert 'restoreVideoShellToDock' in js, 'video shell must remain in its floating dock'
+assert '.v1012-inline-video-slot { display:none!important; }' in css, 'stale inline-video slot must remain non-visual'
+
+# Floating video is shown by default for a new full track, but × hides only the visual.
+assert 'lastTrackKey' in js and 'setVideoExpanded?.(true, false)' in js, 'new full songs must show the floating video by default'
+assert "target.closest('#closeFullPlaybackV91')" in js, 'video × must be intercepted'
+assert 'event.stopImmediatePropagation()' in js and 'hideVideo()' in js, '× must not reach the legacy stop handler'
+assert 'v1013-video-hidden' in js and 'visibility:hidden!important' in css, 'hide-only video visibility state missing'
+assert "target.closest('#videoModeToggleV101')" in js and 'showVideo()' in js, 'Video control must restore/toggle the hidden window'
 assert 'YT.Player' in full, 'official YouTube iframe player must remain unchanged'
 
 # Poster fallback should try another exact canonical lookup before branded art remains.
@@ -28,4 +35,4 @@ assert 'scanQueued' in js and 'requestAnimationFrame(runScan)' in js, 'hotfix sc
 assert 'localStorage.clear(' not in js and 'indexedDB.deleteDatabase(' not in js, 'hotfix must not wipe user data'
 assert "import('./update-manager-v10.js')" in boot, 'Stability v10 must remain active'
 
-print('Auralis v10.1.2 video/artwork refinement tests passed')
+print('Auralis v10.1.3 compact-player/video visibility tests passed')
