@@ -125,6 +125,16 @@ body.v101-video-mode-off .v91-playback-dock.open {
 }
 .v101-row-like { color:#d5a0b4; }
 
+/* v9 rows already contain preview/playlist/full controls. Reserve explicit
+   columns for the v10.1 Like + Queue buttons so the browser never creates
+   implicit sideways grid tracks. */
+.v9-album-row:has([data-v101-graph-like]) {
+  grid-template-columns:28px minmax(0,1fr) 54px 38px 38px 70px 32px 32px;
+}
+.v9-playlist-row:has([data-v101-graph-like]) {
+  grid-template-columns:28px minmax(0,1fr) 38px 70px 38px 32px 32px;
+}
+
 .v101-detail-like,.v101-detail-queue { white-space:nowrap; }
 
 /* Unified queue presentation reuses the existing drawer and does not replace
@@ -195,6 +205,23 @@ body.v101-video-mode-off .v91-playback-dock.open {
   .cover-wrap .v101-add-queue-card,.v101-add-queue-radio,.v101-add-queue-row { opacity:1; }
   .v101-liked-row { grid-template-columns:40px minmax(0,1fr) 32px 32px; }
   .v101-liked-row [data-v101-liked-play] { grid-column:2 / -1; width:100%; }
+  .v9-album-row:has([data-v101-graph-like]) {
+    grid-template-columns:28px minmax(0,1fr) 32px 32px 32px 34px 30px 30px;
+  }
+  .v9-playlist-row:has([data-v101-graph-like]) {
+    grid-template-columns:28px minmax(0,1fr) 32px 34px 32px 30px 30px;
+  }
+  .v9-album-row:has([data-v101-graph-like]) .v91-row-full,
+  .v9-playlist-row:has([data-v101-graph-like]) .v91-row-full {
+    width:34px;
+    padding:0;
+    font-size:0;
+  }
+  .v9-album-row:has([data-v101-graph-like]) .v91-row-full::before,
+  .v9-playlist-row:has([data-v101-graph-like]) .v91-row-full::before {
+    content:'▶';
+    font-size:11px;
+  }
 }
 
 @media(prefers-reduced-motion:reduce) {
