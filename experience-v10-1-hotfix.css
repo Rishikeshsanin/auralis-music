@@ -1,0 +1,172 @@
+/* Auralis v10.1.2 — video integration + artwork refinement */
+
+/* Minimized YouTube playback belongs to the player, not a floating popup. */
+body.v1012-inline-video-active { --player-h:220px; }
+body.v1012-inline-video-active #playerBar {
+  grid-template-columns:minmax(210px,.82fr) minmax(330px,1.18fr) 320px;
+  align-items:center;
+  gap:18px;
+  padding:10px 14px 10px 20px;
+}
+body.v1012-inline-video-active #playerBar .player-extras {
+  position:absolute;
+  right:342px;
+  bottom:20px;
+}
+.v1012-inline-video-slot {
+  display:none;
+  width:320px;
+  height:200px;
+  min-width:200px;
+  min-height:200px;
+  grid-column:3;
+  border-left:1px solid rgba(255,255,255,.08);
+  padding-left:12px;
+  overflow:hidden;
+}
+body.v1012-inline-video-active .v1012-inline-video-slot {
+  display:block;
+}
+.v1012-inline-video-slot .v91-video-shell,
+.v1012-inline-video-slot #youtubePlayerMountV91,
+.v1012-inline-video-slot #youtubePlayerMountV91>div,
+.v1012-inline-video-slot #youtubePlayerMountV91 iframe {
+  width:100%!important;
+  height:200px!important;
+  min-width:200px!important;
+  min-height:200px!important;
+  border:0!important;
+  border-radius:14px!important;
+  overflow:hidden!important;
+  box-shadow:none!important;
+}
+
+/* The old dock is completely non-visual while its video shell lives in the
+   bottom player. It becomes visible only in the explicit expanded Video state. */
+body.v1012-inline-video-active:not(.v1011-video-expanded) .v91-playback-dock.open,
+body.v1012-inline-video-active .v91-playback-dock.v1011-docked.open {
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  width:0!important;
+  height:0!important;
+  min-width:0!important;
+  min-height:0!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+body.v1011-video-expanded .v91-playback-dock.v1011-expanded.open {
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+
+/* No mode-change toast stack. Other useful product toasts remain untouched. */
+.toast.v1012-video-toast-suppressed { display:none!important; }
+
+/* Refined fallback cover: album-art-like, subtle, unique per track, Aura-aware. */
+.v1011-branded-art.v1012-cover {
+  background:
+    radial-gradient(circle at 18% 15%,hsl(var(--v1012-hue,260) 74% 62% / .36),transparent 38%),
+    radial-gradient(circle at 82% 80%,hsl(var(--v1012-hue2,208) 76% 58% / .22),transparent 45%),
+    linear-gradient(145deg,color-mix(in srgb,var(--aura-primary,#7e64ff) 12%,#171923),#08090e 76%);
+}
+.v1011-branded-art.v1012-cover::before {
+  width:68%;
+  border-color:rgba(255,255,255,.075);
+  box-shadow:0 0 0 13px rgba(255,255,255,.018),0 0 0 28px rgba(255,255,255,.012);
+}
+.v1011-branded-art.v1012-cover::after {
+  width:15%;
+  background:color-mix(in srgb,var(--aura-primary,#8b5cf6) 44%,#12131b);
+  border-color:rgba(255,255,255,.12);
+  box-shadow:0 0 28px rgba(0,0,0,.38);
+}
+.v1011-branded-art.v1012-cover>i {
+  top:10%;
+  left:10%;
+  font-size:7px;
+  letter-spacing:.2em;
+  opacity:.7;
+}
+.v1011-branded-art.v1012-cover>small {
+  left:10%;
+  right:auto;
+  bottom:9%;
+  font-size:6px;
+  letter-spacing:.24em;
+  opacity:.58;
+}
+.v1011-branded-art.v1012-cover>b {
+  position:absolute;
+  right:10%;
+  top:9%;
+  font-size:9px;
+  font-weight:850;
+  line-height:1;
+  color:rgba(255,255,255,.56);
+  text-shadow:none;
+}
+.v1012-wave {
+  position:absolute;
+  left:12%;
+  right:12%;
+  bottom:25%;
+  height:18%;
+  display:flex;
+  align-items:end;
+  justify-content:center;
+  gap:4%;
+  z-index:2;
+  opacity:.72;
+}
+.v1012-wave span {
+  width:4%;
+  min-width:2px;
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.88),color-mix(in srgb,var(--aura-primary,#8b5cf6) 72%,#fff));
+  box-shadow:0 0 12px color-mix(in srgb,var(--aura-primary,#8b5cf6) 18%,transparent);
+}
+.v1012-wave span:nth-child(1),.v1012-wave span:nth-child(9){height:28%}
+.v1012-wave span:nth-child(2),.v1012-wave span:nth-child(8){height:52%}
+.v1012-wave span:nth-child(3),.v1012-wave span:nth-child(7){height:76%}
+.v1012-wave span:nth-child(4),.v1012-wave span:nth-child(6){height:48%}
+.v1012-wave span:nth-child(5){height:100%}
+
+@media(max-width:1050px) {
+  body.v1012-inline-video-active { --player-h:220px; }
+  body.v1012-inline-video-active #playerBar {
+    grid-template-columns:minmax(170px,.8fr) minmax(280px,1.2fr) 240px;
+  }
+  .v1012-inline-video-slot { width:240px; }
+  body.v1012-inline-video-active #playerBar .player-extras { right:262px; }
+}
+
+@media(max-width:820px) {
+  body.v1012-inline-video-active { --player-h:272px; }
+  body.v1012-inline-video-active #playerBar {
+    bottom:62px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:200px 56px;
+    gap:8px;
+    padding:8px 12px;
+  }
+  body.v1012-inline-video-active #playerBar .v1012-inline-video-slot {
+    grid-column:1 / -1;
+    grid-row:1;
+    width:min(100%,420px);
+    height:200px;
+    justify-self:center;
+    padding:0;
+    border:0;
+  }
+  body.v1012-inline-video-active #playerBar .player-track { grid-column:1; grid-row:2; }
+  body.v1012-inline-video-active #playerBar .player-center { grid-column:2; grid-row:2; }
+  body.v1012-inline-video-active #playerBar .player-extras { right:52px; bottom:18px; }
+  .v1012-inline-video-slot .v91-video-shell,
+  .v1012-inline-video-slot #youtubePlayerMountV91,
+  .v1012-inline-video-slot #youtubePlayerMountV91>div,
+  .v1012-inline-video-slot #youtubePlayerMountV91 iframe { height:200px!important; }
+}
