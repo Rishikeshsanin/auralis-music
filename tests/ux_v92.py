@@ -4,6 +4,7 @@ root = Path(__file__).resolve().parents[1]
 ux = (root / 'js/ux-reliability-v9-2.js').read_text()
 css = (root / 'experience-v9-2.css').read_text()
 konkani = (root / 'js/konkani-radio-v7.js').read_text()
+audius = (root / 'js/providers/audius.js').read_text()
 sw = (root / 'sw.js').read_text()
 
 assert "#radioView.view:not(.active-view){display:none!important}" in css, 'inactive Radio view must never leak above search/discover pages'
@@ -11,6 +12,9 @@ assert "#radioView.view.active-view{display:flex!important" in css, 'Radio must 
 assert 'ART_HOST_SELECTOR' in ux and 'repairImage' in ux and 'auralis-art-fallback-v92' in ux, 'global artwork failure recovery missing'
 assert "window.addEventListener('error'" in ux and 'HTMLImageElement' in ux, 'runtime image failures are not captured'
 assert 'scanBrokenArtwork' in ux and 'naturalWidth' in ux, 'already-failed cached images are not repaired'
+assert 'tryAlternateArtwork' in ux and '1000x1000' in ux and '480x480' in ux and '150x150' in ux, 'Audius artwork size failover missing'
+assert 'isAudiusArtwork' in ux and 'auralisArtSizes' in ux, 'Audius artwork retries must be scoped and loop-guarded'
+assert 'Array.isArray(art.mirrors)' in audius and 'artworkCandidates' in audius, 'Audius artwork mirrors must be retained'
 assert "const VERSION = '9.2.2'" in ux, 'v9.2.2 freeze hotfix version missing'
 assert 'restorePlaybackDockContract' in ux, 'known-good v9.1 playback dock contract must be restored'
 assert "classList.toggle('minimized-v92'" not in ux and 'PANEL_KEY' not in ux and "event.target.closest?.('#closeFullPlaybackV91')" not in ux, 'UX layer must not intercept or minimize the YouTube playback dock'
