@@ -1,7 +1,7 @@
-const CACHE='auralis-shell-v14';
+const CACHE='auralis-shell-v15';
 const SHELL=[
-  './','./index.html','./styles.css','./fixes.css','./experience.css','./experience-v3.css','./experience-v4.css','./experience-v5.css','./experience-v6.css','./experience-v7.css','./experience-v7-aura.css','./experience-v8-aura.css','./experience-v9.css','./experience-v9-1.css',
-  './js/app-v3.js','./js/row-play-targets.js','./js/radio-reliability-v6.js','./js/auralis-experience-v7.js','./js/konkani-radio-v7.js','./js/music-graph-v9.js','./js/full-playback-v9-1.js','./js/store.js','./js/fallback.js','./js/collections.js','./js/library-map.js',
+  './','./index.html','./styles.css','./fixes.css','./experience.css','./experience-v3.css','./experience-v4.css','./experience-v5.css','./experience-v6.css','./experience-v7.css','./experience-v7-aura.css','./experience-v8-aura.css','./experience-v9.css','./experience-v9-1.css','./experience-v9-2.css',
+  './js/app-v3.js','./js/row-play-targets.js','./js/radio-reliability-v6.js','./js/auralis-experience-v7.js','./js/konkani-radio-v7.js','./js/music-graph-v9.js','./js/full-playback-v9-1.js','./js/ux-reliability-v9-2.js','./js/store.js','./js/fallback.js','./js/collections.js','./js/library-map.js',
   './js/providers/audius.js','./js/providers/jamendo.js','./js/providers/radio-browser.js',
   './js/providers/catalog-manager.js','./assets/icon.svg'
 ];
