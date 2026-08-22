@@ -1,0 +1,31 @@
+/* Auralis v9.1 — full-song YouTube playback layer */
+.v91-full-button,.v91-row-full,.v91-detail-full{position:relative;overflow:hidden}
+.v91-full-button{border:1px solid color-mix(in srgb,var(--accent,#8b5cf6) 48%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--accent,#8b5cf6) 24%,rgba(255,255,255,.04)),rgba(255,255,255,.035));color:#fff;border-radius:999px;padding:.56rem .8rem;font-weight:800;letter-spacing:.01em;cursor:pointer;box-shadow:0 0 0 1px rgba(255,255,255,.025) inset,0 10px 26px rgba(0,0,0,.2);transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+.v91-full-button:hover,.v91-row-full:hover,.v91-detail-full:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent,#8b5cf6) 78%,white 5%);box-shadow:0 12px 32px color-mix(in srgb,var(--accent,#8b5cf6) 16%,transparent)}
+.v91-row-full{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.055);color:#fff;border-radius:999px;padding:.38rem .68rem;font-size:.76rem;font-weight:800;cursor:pointer;white-space:nowrap}
+.v91-detail-full{border-color:color-mix(in srgb,var(--accent,#8b5cf6) 60%,transparent)!important;background:color-mix(in srgb,var(--accent,#8b5cf6) 14%,rgba(255,255,255,.035))!important;color:#fff!important}
+
+.v91-playback-dock{position:fixed;right:18px;bottom:112px;width:min(380px,calc(100vw - 36px));z-index:75;opacity:0;pointer-events:none;transform:translateY(18px) scale(.98);transition:opacity .24s ease,transform .24s ease;background:linear-gradient(155deg,rgba(12,14,22,.94),rgba(8,9,15,.91));border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:12px;box-shadow:0 32px 90px rgba(0,0,0,.52),0 0 0 1px rgba(255,255,255,.025) inset;backdrop-filter:blur(24px) saturate(135%);-webkit-backdrop-filter:blur(24px) saturate(135%);overflow:hidden}
+.v91-playback-dock::before{content:"";position:absolute;inset:-45% 22% auto -20%;height:220px;background:radial-gradient(circle,color-mix(in srgb,var(--accent,#8b5cf6) 34%,transparent),transparent 65%);filter:blur(24px);pointer-events:none;animation:v91AuraDrift 8s ease-in-out infinite alternate}
+.v91-playback-dock.open{opacity:1;pointer-events:auto;transform:none}
+.v91-dock-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 2px 10px;position:relative;z-index:1}
+.v91-dock-head>div{display:grid;grid-template-columns:auto auto;column-gap:8px;align-items:center}
+.v91-dock-head strong{font-size:.72rem;letter-spacing:.15em}.v91-dock-head small{grid-column:2;color:rgba(255,255,255,.58);font-size:.7rem}.v91-source-dot{width:8px;height:8px;border-radius:50%;background:#ff0033;box-shadow:0 0 18px rgba(255,0,51,.75);grid-row:1/3}
+.v91-dock-head button{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.055);color:#fff;font-size:1.1rem;cursor:pointer}
+.v91-video-shell{position:relative;width:100%;height:214px;min-height:200px;border-radius:18px;overflow:hidden;background:#020204;border:1px solid rgba(255,255,255,.09);box-shadow:0 12px 28px rgba(0,0,0,.35)}
+#youtubePlayerMountV91,#youtubePlayerMountV91>div,#youtubePlayerMountV91 iframe{width:100%!important;height:100%!important;min-height:200px!important;border:0}
+.v91-video-loader{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--accent,#8b5cf6) 20%,transparent),rgba(3,4,8,.96) 72%);opacity:0;pointer-events:none;transition:opacity .18s ease;text-align:center;padding:20px;color:rgba(255,255,255,.82);font-size:.8rem}
+.v91-video-loader.show{opacity:1;pointer-events:auto}.v91-video-loader i{width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.12);border-top-color:color-mix(in srgb,var(--accent,#8b5cf6) 82%,white 8%);box-shadow:0 0 28px color-mix(in srgb,var(--accent,#8b5cf6) 25%,transparent);animation:v91Spin .9s linear infinite}
+.v91-now-playing{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:center;padding:11px 3px 2px;position:relative;z-index:1}.v91-now-art{width:48px;height:48px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,color-mix(in srgb,var(--accent,#8b5cf6) 38%,#111),#090a0f);display:grid;place-items:center;font-weight:900}.v91-now-art img{width:100%;height:100%;object-fit:cover}.v91-now-playing>div:last-child{min-width:0;display:flex;flex-direction:column;gap:2px}.v91-now-playing strong,.v91-now-playing span,.v91-now-playing small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.v91-now-playing strong{font-size:.9rem}.v91-now-playing span{font-size:.78rem;color:rgba(255,255,255,.72)}.v91-now-playing small{font-size:.68rem;color:rgba(255,255,255,.48)}
+
+#playerBar.v91-youtube-active{border-color:color-mix(in srgb,var(--accent,#8b5cf6) 40%,rgba(255,255,255,.12));box-shadow:0 -14px 44px color-mix(in srgb,var(--accent,#8b5cf6) 10%,rgba(0,0,0,.22)),0 -1px rgba(255,255,255,.04)}
+#playerBar.v91-youtube-active #playerSource::before{content:"●";color:#ff0033;margin-right:.35rem;text-shadow:0 0 10px rgba(255,0,51,.6)}
+body.auralis-full-playback-v91 .ambient-a{opacity:.78}
+html.aura-mode-on .v91-playback-dock{border-color:color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 34%,rgba(255,255,255,.13));box-shadow:0 32px 90px rgba(0,0,0,.5),0 0 55px color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 12%,transparent)}
+
+@keyframes v91Spin{to{transform:rotate(360deg)}}
+@keyframes v91AuraDrift{from{transform:translate3d(-4%,0,0) scale(.96)}to{transform:translate3d(14%,8%,0) scale(1.08)}}
+
+@media(max-width:720px){.v91-playback-dock{right:10px;bottom:144px;width:calc(100vw - 20px);border-radius:20px;padding:10px}.v91-video-shell{height:205px}.v91-row-full{padding:.34rem .52rem;font-size:.7rem}.v91-full-button{padding:.5rem .66rem;font-size:.76rem}}
+@media(max-height:650px) and (min-width:721px){.v91-playback-dock{bottom:96px;width:330px}.v91-video-shell{height:200px}}
+@media(prefers-reduced-motion:reduce){.v91-playback-dock,.v91-full-button,.v91-row-full,.v91-detail-full{transition:none!important}.v91-playback-dock::before{animation:none!important}.v91-video-loader i{animation-duration:1.8s}}
