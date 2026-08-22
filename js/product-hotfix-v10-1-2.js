@@ -1,14 +1,13 @@
 (() => {
-  const VERSION = '10.1.2';
+  const VERSION = '10.1.3';
   const $ = (selector, root = document) => root?.querySelector?.(selector) || null;
   const $$ = (selector, root = document) => root?.querySelectorAll ? [...root.querySelectorAll(selector)] : [];
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
   const normalized = value => clean(value).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
   const state = {
-    shellHome: null,
-    shellNext: null,
-    shellMoved: false,
+    videoHidden: false,
+    lastTrackKey: '',
     scanQueued: false,
     artworkCache: new Map(),
     artworkPending: new WeakSet()
@@ -23,84 +22,117 @@
     document.head.append(link);
   }
 
-  function ensureInlineSlot() {
-    let slot = $('#inlineVideoSlotV1012');
-    if (slot) return slot;
-    const player = $('#playerBar');
-    if (!player) return null;
-    slot = document.createElement('div');
-    slot.id = 'inlineVideoSlotV1012';
-    slot.className = 'v1012-inline-video-slot';
-    slot.setAttribute('aria-label', 'YouTube video player');
-    const extras = $('.player-extras', player);
-    if (extras) extras.before(slot);
-    else player.append(slot);
-    return slot;
-  }
-
-  function rememberShellHome(shell) {
-    if (!shell || state.shellHome) return;
-    state.shellHome = shell.parentNode;
-    state.shellNext = shell.nextSibling;
-  }
-
-  function moveShellToInline() {
-    const shell = $('#fullPlaybackDockV91 .v91-video-shell') || $('#inlineVideoSlotV1012 .v91-video-shell');
-    const slot = ensureInlineSlot();
-    if (!shell || !slot) return;
-    rememberShellHome(shell);
-    if (shell.parentNode !== slot) slot.append(shell);
-    state.shellMoved = true;
-  }
-
-  function moveShellToDock() {
-    const shell = $('#inlineVideoSlotV1012 .v91-video-shell') || $('#fullPlaybackDockV91 .v91-video-shell');
+  function restoreVideoShellToDock() {
     const dock = $('#fullPlaybackDockV91');
-    if (!shell || !dock) return;
-    if (shell.parentNode !== dock) {
-      const anchor = $('.v91-now-playing', dock);
-      if (anchor?.nextSibling) dock.insertBefore(shell, anchor.nextSibling);
+    const shell = $('#inlineVideoSlotV1012 .v91-video-shell') || $('#fullPlaybackDockV91 .v91-video-shell');
+    if (dock && shell && shell.parentNode !== dock) {
+      const nowPlaying = $('.v91-now-playing', dock);
+      if (nowPlaying) dock.insertBefore(shell, nowPlaying);
       else dock.append(shell);
     }
-    state.shellMoved = false;
+    $('#inlineVideoSlotV1012')?.remove();
+    document.body.classList.remove('v1012-inline-video-active');
   }
 
-  function syncVideoHome() {
-    const active = Boolean(window.AuralisFullPlaybackV91?.state?.active);
-    const expanded = document.body.classList.contains('v1011-video-expanded');
+  function fullPlaybackActive() {
+    return Boolean(window.AuralisFullPlaybackV91?.state?.active);
+  }
+
+  function currentTrackKey() {
+    const track = window.AuralisFullPlaybackV91?.state?.track;
+    return track ? `${clean(track.title).toLowerCase()}::${clean(track.artist).toLowerCase()}` : '';
+  }
+
+  function labelVideoControls() {
+    const close = $('#closeFullPlaybackV91');
+    if (close) {
+      if (close.title !== 'Hide video') close.title = 'Hide video';
+      if (close.getAttribute('aria-label') !== 'Hide video') close.setAttribute('aria-label', 'Hide video');
+    }
+    const button = $('#videoModeToggleV101');
+    if (button) {
+      const active = fullPlaybackActive();
+      button.title = active
+        ? (state.videoHidden ? 'Show video player' : 'Hide video player')
+        : 'Video becomes available during full playback';
+      button.setAttribute('aria-pressed', String(active && !state.videoHidden));
+      button.classList.toggle('v1013-video-visible', active && !state.videoHidden);
+    }
+  }
+
+  function showVideo() {
+    if (!fullPlaybackActive()) return;
+    restoreVideoShellToDock();
+    state.videoHidden = false;
+    document.body.classList.remove('v1013-video-hidden');
+    window.AuralisProductPolishV1011?.setVideoExpanded?.(true, false);
+    const dock = $('#fullPlaybackDockV91');
+    dock?.classList.add('open');
+    dock?.setAttribute('aria-hidden', 'false');
+    labelVideoControls();
+  }
+
+  function hideVideo() {
+    if (!fullPlaybackActive()) return;
+    restoreVideoShellToDock();
+    state.videoHidden = true;
+    window.AuralisProductPolishV1011?.setVideoExpanded?.(false, false);
+    document.body.classList.add('v1013-video-hidden');
+    labelVideoControls();
+  }
+
+  function syncVideoPopup() {
+    restoreVideoShellToDock();
+    const active = fullPlaybackActive();
+    const key = currentTrackKey();
+
     if (!active) {
-      document.body.classList.remove('v1012-inline-video-active');
-      if (state.shellMoved) moveShellToDock();
+      state.videoHidden = false;
+      state.lastTrackKey = '';
+      document.body.classList.remove('v1013-video-hidden');
+      labelVideoControls();
       return;
     }
-    if (expanded) {
-      document.body.classList.remove('v1012-inline-video-active');
-      moveShellToDock();
-    } else {
-      moveShellToInline();
-      document.body.classList.add('v1012-inline-video-active');
+
+    // A newly started full song shows its video by default. The user can hide it
+    // with × and reopen it from the Video control without stopping playback.
+    if (key && key !== state.lastTrackKey) {
+      state.lastTrackKey = key;
+      state.videoHidden = false;
+      document.body.classList.remove('v1013-video-hidden');
+      window.AuralisProductPolishV1011?.setVideoExpanded?.(true, false);
     }
+
+    if (state.videoHidden) {
+      document.body.classList.add('v1013-video-hidden');
+    } else {
+      document.body.classList.remove('v1013-video-hidden');
+      if (!document.body.classList.contains('v1011-video-expanded')) {
+        window.AuralisProductPolishV1011?.setVideoExpanded?.(true, false);
+      }
+    }
+    labelVideoControls();
   }
 
   function interceptVideoControls(event) {
     const target = event.target;
-    if (target.closest('#videoModeToggleV101')) {
-      const api = window.AuralisProductPolishV1011;
-      if (!api?.setVideoExpanded) return;
+    if (!(target instanceof Element)) return;
+
+    if (target.closest('#closeFullPlaybackV91') || target.closest('#minimizeVideoV1011')) {
+      if (!fullPlaybackActive()) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      const expanded = document.body.classList.contains('v1011-video-expanded');
-      api.setVideoExpanded(!expanded, false);
-      requestAnimationFrame(syncVideoHome);
+      hideVideo();
       return;
     }
-    if (target.closest('#minimizeVideoV1011')) {
-      const api = window.AuralisProductPolishV1011;
-      if (!api?.setVideoExpanded) return;
+
+    if (target.closest('#videoModeToggleV101')) {
+      if (!fullPlaybackActive()) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      api.setVideoExpanded(false, false);
-      requestAnimationFrame(syncVideoHome);
+      if (state.videoHidden) hideVideo();
+      if (state.videoHidden) showVideo();
+      else hideVideo();
     }
   }
 
@@ -237,7 +269,7 @@
 
   function runScan() {
     state.scanQueued = false;
-    syncVideoHome();
+    syncVideoPopup();
     scanFallbacks();
   }
 
@@ -249,8 +281,8 @@
 
   function start() {
     loadCss();
-    ensureInlineSlot();
-    syncVideoHome();
+    restoreVideoShellToDock();
+    syncVideoPopup();
     scanFallbacks();
     window.addEventListener('click', interceptVideoControls, true);
 
@@ -260,13 +292,15 @@
       }));
       scheduleScan();
     });
-    observer.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
+    observer.observe(document.body, { childList:true, subtree:true });
     window.addEventListener('resize', scheduleScan);
-    setInterval(syncVideoHome, 400);
+    setInterval(syncVideoPopup, 350);
 
     window.AuralisProductHotfixV1012 = {
       version:VERSION,
-      syncVideoHome,
+      showVideo,
+      hideVideo,
+      syncVideoPopup,
       scanFallbacks
     };
   }
