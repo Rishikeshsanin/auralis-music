@@ -40,6 +40,7 @@ jobs:
           node --check js/update-manager-v10.js
           node --check js/player-universe-v10-1.js
           node --check js/product-polish-v10-1.js
+          node --check js/product-hotfix-v10-1-2.js
           node --check sw.js
           node --check js/app-v2.js
           node --check js/collections.js
@@ -65,4 +66,5 @@ jobs:
           python tests/stability_v10.py
           python tests/player_universe_v101.py
           python tests/product_polish_v1011.py
+          python tests/product_hotfix_v1012.py
           node tests/sw_lifecycle_v10.mjs
