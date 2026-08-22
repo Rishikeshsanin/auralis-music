@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '10.1.3';
+  const VERSION = '10.1.4';
   const $ = (selector, root = document) => root?.querySelector?.(selector) || null;
   const $$ = (selector, root = document) => root?.querySelectorAll ? [...root.querySelectorAll(selector)] : [];
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
@@ -10,7 +10,10 @@
     lastTrackKey: '',
     scanQueued: false,
     artworkCache: new Map(),
-    artworkPending: new WeakSet()
+    audiusArtworkCache: new Map(),
+    artworkPending: new WeakSet(),
+    preserveTrendingUntil: 0,
+    trendingGuardInstalled: false
   };
 
   function loadCss() {
@@ -94,8 +97,6 @@
       return;
     }
 
-    // A newly started full song shows its video by default. The user can hide it
-    // with × and reopen it from the Video control without stopping playback.
     if (key && key !== state.lastTrackKey) {
       state.lastTrackKey = key;
       state.videoHidden = false;
@@ -130,7 +131,6 @@
       if (!fullPlaybackActive()) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (state.videoHidden) hideVideo();
       if (state.videoHidden) showVideo();
       else hideVideo();
     }
@@ -145,6 +145,69 @@
       toast.classList.add('v1012-video-toast-suppressed');
       requestAnimationFrame(() => toast.remove());
     }
+  }
+
+  function markTrendingPreserveWindow() {
+    state.preserveTrendingUntil = performance.now() + 220;
+  }
+
+  function cardSignature(card) {
+    if (!card) return '';
+    return [
+      clean($('h3', card)?.textContent),
+      clean($('p', card)?.textContent),
+      clean($('.provider-badge', card)?.textContent),
+      clean($('.card-meta', card)?.textContent)
+    ].join('::');
+  }
+
+  function syncTrendingState(existingCards, nextCards) {
+    existingCards.forEach((card, index) => {
+      const next = nextCards[index];
+      if (!next) return;
+      card.classList.toggle('active', next.classList.contains('active'));
+      const currentButton = $('[data-play-index]', card);
+      const nextButton = $('[data-play-index]', next);
+      if (currentButton && nextButton) {
+        currentButton.textContent = nextButton.textContent;
+        const label = nextButton.getAttribute('aria-label');
+        if (label) currentButton.setAttribute('aria-label', label);
+      }
+    });
+  }
+
+  function installTrendingGridGuard() {
+    if (state.trendingGuardInstalled) return;
+    const grid = $('#trendingGrid');
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    if (!grid || !descriptor?.get || !descriptor?.set) return;
+
+    try {
+      Object.defineProperty(grid, 'innerHTML', {
+        configurable: true,
+        get() {
+          return descriptor.get.call(this);
+        },
+        set(value) {
+          if (performance.now() <= state.preserveTrendingUntil) {
+            const existingCards = $$('.music-card', this);
+            if (existingCards.length) {
+              const template = document.createElement('template');
+              template.innerHTML = String(value ?? '');
+              const nextCards = $$('.music-card', template.content);
+              const sameCards = nextCards.length === existingCards.length
+                && nextCards.every((card, index) => cardSignature(card) === cardSignature(existingCards[index]));
+              if (sameCards) {
+                syncTrendingState(existingCards, nextCards);
+                return;
+              }
+            }
+          }
+          descriptor.set.call(this, value);
+        }
+      });
+      state.trendingGuardInstalled = true;
+    } catch {}
   }
 
   function identityForHost(host) {
@@ -209,6 +272,69 @@
     return request;
   }
 
+  function validArtworkUrl(value) {
+    const url = clean(value);
+    return /^https?:\/\//i.test(url) ? url : '';
+  }
+
+  function audiusCandidates(track) {
+    const art = track?.artwork || {};
+    const mirrors = Array.isArray(art.mirrors) ? art.mirrors : [];
+    return [...new Set([
+      art['480x480'],
+      art['1000x1000'],
+      art['150x150'],
+      art._480x480,
+      art._1000x1000,
+      art._150x150,
+      ...mirrors
+    ].map(validArtworkUrl).filter(Boolean))];
+  }
+
+  function audiusMatchScore(track, identity) {
+    const title = normalized(track?.title);
+    const artist = normalized(track?.user?.name || track?.user?.handle);
+    const wantedTitle = normalized(identity.title);
+    const wantedArtist = normalized(identity.artist);
+    if (!title || title !== wantedTitle) return 0;
+    let score = 20;
+    if (artist && wantedArtist && artist === wantedArtist) score += 14;
+    else if (artist && wantedArtist && (artist.includes(wantedArtist) || wantedArtist.includes(artist))) score += 7;
+    score += Math.min(3, audiusCandidates(track).length);
+    return score;
+  }
+
+  async function queryAudiusArtwork(identity) {
+    if (!identity.title || !identity.artist) return [];
+    const key = `${normalized(identity.title)}::${normalized(identity.artist)}`;
+    if (state.audiusArtworkCache.has(key)) return state.audiusArtworkCache.get(key);
+    const request = (async () => {
+      try {
+        const url = new URL('https://api.audius.co/v1/tracks/search');
+        url.searchParams.set('app_name', 'AuralisMusic');
+        url.searchParams.set('query', `${identity.title} ${identity.artist}`);
+        url.searchParams.set('limit', '10');
+        const response = await fetch(url, { headers:{ Accept:'application/json' } });
+        if (!response.ok) return [];
+        const json = await response.json();
+        const ranked = (Array.isArray(json.data) ? json.data : [])
+          .map(track => ({ track, score:audiusMatchScore(track, identity) }))
+          .filter(entry => entry.score >= 27)
+          .sort((a,b) => b.score - a.score);
+        return ranked.length ? audiusCandidates(ranked[0].track) : [];
+      } catch {
+        return [];
+      }
+    })();
+    state.audiusArtworkCache.set(key, request);
+    return request;
+  }
+
+  function hostIsAudius(host) {
+    const owner = host?.closest?.('.music-card,.track-row,.queue-item,.v9-graph-card,.v9-album-row,.v9-playlist-row,.v101-liked-row,.player');
+    return Boolean(owner && $('.provider-badge.audius,.provider-badge', owner)?.textContent?.trim().toLowerCase() === 'audius');
+  }
+
   function seedFallback(host, identity) {
     const fallback = $('.v1011-branded-art', host);
     if (!fallback) return;
@@ -224,21 +350,34 @@
     }
   }
 
-  function installRecoveredArtwork(host, url, identity) {
-    if (!host || !url) return;
+  function installRecoveredArtwork(host, urls, identity) {
+    if (!host) return;
+    const candidates = [...new Set((Array.isArray(urls) ? urls : [urls]).map(validArtworkUrl).filter(Boolean))];
+    if (!candidates.length) return;
     const img = document.createElement('img');
     img.alt = `${identity.title || 'Track'} artwork`;
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
+    let index = 0;
+
+    const tryNext = () => {
+      if (!host.isConnected || index >= candidates.length) {
+        img.remove();
+        return;
+      }
+      img.src = candidates[index++];
+    };
+
     img.addEventListener('load', () => {
       $('.v1011-branded-art', host)?.remove();
       $$('.cover-fallback,.auralis-art-fallback-v92', host).forEach(node => node.remove());
       host.classList.remove('v1011-art-fallback-active','auralis-art-failed-v92','image-failed','no-art');
       host.dataset.v1012PosterRecovered = 'true';
+      host.dataset.v1012RecoveredSrc = img.currentSrc || img.src;
     }, { once:true });
-    img.addEventListener('error', () => img.remove(), { once:true });
+    img.addEventListener('error', tryNext);
     host.prepend(img);
-    img.src = url;
+    tryNext();
   }
 
   async function improveFallback(host) {
@@ -256,8 +395,12 @@
     if (!identity.artist) return;
     state.artworkPending.add(host);
     try {
-      const artwork = await queryArtwork(identity);
-      if (artwork && host.isConnected) installRecoveredArtwork(host, artwork, identity);
+      let candidates = hostIsAudius(host) ? await queryAudiusArtwork(identity) : [];
+      if (!candidates.length) {
+        const artwork = await queryArtwork(identity);
+        if (artwork) candidates = [artwork];
+      }
+      if (candidates.length && host.isConnected) installRecoveredArtwork(host, candidates, identity);
     } finally {
       state.artworkPending.delete(host);
     }
@@ -282,9 +425,22 @@
   function start() {
     loadCss();
     restoreVideoShellToDock();
+    installTrendingGridGuard();
     syncVideoPopup();
     scanFallbacks();
-    window.addEventListener('click', interceptVideoControls, true);
+    window.addEventListener('click', event => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('#playButton,[data-play-index],.music-card')) {
+        markTrendingPreserveWindow();
+      }
+      interceptVideoControls(event);
+    }, true);
+    document.addEventListener('play', event => {
+      if (event.target?.id === 'audio') markTrendingPreserveWindow();
+    }, true);
+    document.addEventListener('pause', event => {
+      if (event.target?.id === 'audio') markTrendingPreserveWindow();
+    }, true);
 
     const observer = new MutationObserver(records => {
       records.forEach(record => record.addedNodes.forEach(node => {
@@ -301,7 +457,8 @@
       showVideo,
       hideVideo,
       syncVideoPopup,
-      scanFallbacks
+      scanFallbacks,
+      installTrendingGridGuard
     };
   }
 
