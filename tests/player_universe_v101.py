@@ -30,7 +30,9 @@ assert "import('./player-universe-v10-1.js')" in boot, 'v10.1 interaction layer 
 assert 'videoModeToggleV101' in app and 'VIDEO_PREF_KEY' in app, 'bottom video-mode toggle missing'
 assert 'v101-video-mode-off' in app and 'v101-video-mode-off .v91-playback-dock.open' in css, 'video visibility mode missing'
 assert 'state.player?.destroy' not in app, 'v10.1 video toggle must not destroy the existing YouTube player'
-assert 'youtube.com/embed/' in full and 'youtube-dl' not in full.lower() and 'yt-dlp' not in full.lower(), 'official YouTube playback contract changed'
+assert 'https://www.youtube.com/iframe_api' in full and 'new YT.Player' in full, 'official YouTube IFrame Player API contract changed'
+assert 'playerVars' in full and 'origin: location.origin' in full, 'YouTube embed safety/origin settings changed'
+assert 'youtube-dl' not in full.lower() and 'yt-dlp' not in full.lower(), 'downloader-style YouTube integration is forbidden'
 
 # Unified explicit queue: direct catalog, rows, radio and Music Graph/video results.
 for marker in ['.music-card', '.track-row', '.radio-card', '.v9-graph-card', '.v9-album-row,.v9-playlist-row']:
