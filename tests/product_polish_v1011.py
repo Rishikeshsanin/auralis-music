@@ -10,13 +10,16 @@ full = (root / 'js' / 'full-playback-v9-1.js').read_text()
 assert "import('./product-polish-v10-1.js')" in boot, 'final product polish must boot after v10.1'
 assert boot.index("import('./player-universe-v10-1.js')") < boot.index("import('./product-polish-v10-1.js')"), 'polish must boot after player/universe layer'
 
-# Video is opt-in as a large floating window. Default is compact/docked.
+# Video is opt-in as a large floating window. Default is a simple dock attached
+# to the player, never the large popup.
 assert "expandedVideo: false" in js, 'large video must not open automatically'
 assert "repeat.after(button)" in js, 'Video control must sit next to Repeat'
 assert 'v1011-video-docked' in js and 'v1011-video-expanded' in js, 'docked/expanded video states missing'
 assert 'beginDrag' in js and 'moveDrag' in js and 'ResizeObserver' in js, 'desktop drag/resize support missing'
 assert 'VIDEO_LAYOUT_KEY' in js and 'saveVideoLayout' in js, 'video size/position persistence missing'
-assert 'v1011-docked.open' in css and 'resize:both' in css, 'compact + resizable video styling missing'
+assert 'v1011-docked.open' in css and 'resize:both' in css, 'docked + resizable video styling missing'
+assert 'width:320px' in css and 'height:200px' in css and 'min-height:200px!important' in css, 'docked YouTube viewport must stay at least 200px in each axis'
+assert '.v1011-video-button.v1011-open' in css, 'Video control should highlight only when floating video is open'
 assert 'window.AuralisFullPlaybackV91' in js and 'YT.Player' in full, 'official YouTube player must remain the playback engine'
 assert 'youtube-dl' not in js.lower() and 'yt-dlp' not in js.lower(), 'downloader-style playback is forbidden'
 
