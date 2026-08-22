@@ -124,7 +124,9 @@ async function fetchJson(url, timeout = 6500) {
 }
 
 function buildSearchQuery({ q, title, artist, album }) {
-  const pieces = [title || q, artist, album].map(value => safeText(value)).filter(Boolean);
+  // Title + artist is usually the cleanest path to the canonical song. Album names can
+  // bias YouTube toward alternate releases/remixes, so only use album when artist is missing.
+  const pieces = [title || q, artist || album].map(value => safeText(value)).filter(Boolean);
   return `${pieces.join(' ')} official audio`.trim();
 }
 
