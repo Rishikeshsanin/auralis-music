@@ -5,6 +5,7 @@
   const ART_HOST_SELECTOR = '.cover-wrap,.row-cover,.queue-item-cover,.player-cover,.radio-logo,.v5-radio-logo,.v91-now-art';
   const ART_OWNER_SELECTOR = '.music-card,.track-row,.queue-item,.player,.v91-playback-dock';
   const ART_SIZES = ['1000x1000', '480x480', '150x150'];
+  const canonicalArtworkCache = new Map();
   let maintenanceQueued = false;
 
   function loadCss() {
@@ -20,6 +21,15 @@
     return String(value || '').replace(/\s+/g, ' ').trim();
   }
 
+  function identityText(value = '') {
+    return clean(value)
+      .toLocaleLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
   function fallbackLabel(host) {
     const owner = host.closest('.music-card,.track-row,.queue-item,.radio-card,.v5-language-station,.player,.v91-playback-dock');
     const title = clean(
@@ -31,6 +41,101 @@
     const words = title.replace(/[^\p{L}\p{N} ]/gu, ' ').split(' ').filter(Boolean);
     if (!words.length) return '♪';
     return words.slice(0, 2).map(word => word[0]).join('').toLocaleUpperCase();
+  }
+
+  function artworkIdentity(img) {
+    const owner = img.closest(ART_OWNER_SELECTOR);
+    if (!owner) return { title: '', artist: '' };
+
+    if (owner.classList.contains('music-card')) {
+      return {
+        title: clean(owner.querySelector('h3')?.textContent),
+        artist: clean(owner.querySelector('p')?.textContent)
+      };
+    }
+
+    if (owner.classList.contains('track-row')) {
+      return {
+        title: clean(owner.querySelector('.row-title-copy strong')?.textContent || owner.querySelector('strong')?.textContent),
+        artist: clean(owner.querySelector('.row-title-copy span')?.textContent)
+      };
+    }
+
+    if (owner.classList.contains('queue-item')) {
+      return {
+        title: clean(owner.querySelector('.queue-item-copy strong')?.textContent || owner.querySelector('strong')?.textContent),
+        artist: clean((owner.querySelector('.queue-item-copy span')?.textContent || '').split(' · ')[0])
+      };
+    }
+
+    if (owner.classList.contains('player')) {
+      return { title: clean($('#playerTitle')?.textContent), artist: clean($('#playerArtist')?.textContent) };
+    }
+
+    return {
+      title: clean($('#fullPlaybackTitleV91')?.textContent || owner.querySelector('strong')?.textContent),
+      artist: clean($('#fullPlaybackArtistV91')?.textContent || owner.querySelector('small')?.textContent)
+    };
+  }
+
+  function scoreArtworkCandidate(item, identity) {
+    const title = identityText(item?.title);
+    const artist = identityText(item?.artist);
+    const wantedTitle = identityText(identity.title);
+    const wantedArtist = identityText(identity.artist);
+    if (!title || !wantedTitle || title !== wantedTitle) return 0;
+
+    let score = 20;
+    if (artist && wantedArtist && artist === wantedArtist) score += 14;
+    else if (artist && wantedArtist && (artist.includes(wantedArtist) || wantedArtist.includes(artist))) score += 7;
+    if (item?.artwork) score += 2;
+    if (item?.artworkFallback) score += 1;
+    return score;
+  }
+
+  function candidateArtwork(item) {
+    return clean(item?.artwork || item?.artworkFallback || '');
+  }
+
+  async function canonicalArtworkFor(identity) {
+    const title = clean(identity.title);
+    const artist = clean(identity.artist);
+    if (!title || !artist) return '';
+    const key = `${identityText(title)}::${identityText(artist)}`;
+    if (canonicalArtworkCache.has(key)) return canonicalArtworkCache.get(key);
+
+    const request = (async () => {
+      try {
+        const endpoint = new URL('./api/catalog', window.location.href);
+        endpoint.searchParams.set('mode', 'search');
+        endpoint.searchParams.set('kind', 'track');
+        endpoint.searchParams.set('q', `${title} ${artist}`);
+        endpoint.searchParams.set('limit', '8');
+        const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+        if (!response.ok) return '';
+        const json = await response.json();
+        const ranked = (Array.isArray(json?.items) ? json.items : [])
+          .map(item => ({ item, score: scoreArtworkCandidate(item, { title, artist }) }))
+          .filter(entry => entry.score >= 27 && candidateArtwork(entry.item))
+          .sort((a, b) => b.score - a.score);
+        return ranked.length ? candidateArtwork(ranked[0].item) : '';
+      } catch {
+        return '';
+      }
+    })();
+
+    canonicalArtworkCache.set(key, request);
+    return request;
+  }
+
+  function prepareImageRetry(img) {
+    img.onerror = null;
+    img.removeAttribute('onerror');
+    img.style.display = '';
+    img.dataset.auralisArtRepaired = 'false';
+    const host = img.closest(ART_HOST_SELECTOR);
+    host?.classList.remove('image-failed', 'auralis-art-failed-v92');
+    host?.querySelector(':scope > .auralis-art-fallback-v92')?.remove();
   }
 
   function isAudiusArtwork(img, src = '') {
@@ -54,9 +159,30 @@
 
     tried.add(nextSize);
     img.dataset.auralisArtSizes = [...tried].join(',');
-    img.dataset.auralisArtRepaired = 'false';
-    img.style.display = '';
+    prepareImageRetry(img);
     img.src = src.replace(match[1], nextSize);
+    return true;
+  }
+
+  async function tryCanonicalArtwork(img) {
+    if (!(img instanceof HTMLImageElement)) return false;
+    if (img.dataset.auralisCanonicalPending === 'true') return true;
+    if (img.dataset.auralisCanonicalTried === 'true') return false;
+
+    const identity = artworkIdentity(img);
+    if (!identity.title || !identity.artist) {
+      img.dataset.auralisCanonicalTried = 'true';
+      return false;
+    }
+
+    img.dataset.auralisCanonicalPending = 'true';
+    const artwork = await canonicalArtworkFor(identity);
+    img.dataset.auralisCanonicalPending = 'false';
+    img.dataset.auralisCanonicalTried = 'true';
+    if (!artwork || !img.isConnected || artwork === clean(img.currentSrc || img.src || '')) return false;
+
+    prepareImageRetry(img);
+    img.src = artwork;
     return true;
   }
 
@@ -64,7 +190,6 @@
     if (!(img instanceof HTMLImageElement) || img.dataset.auralisArtRepaired === 'true') return;
     if (!img.complete) return;
     if (img.naturalWidth && img.style.display !== 'none') return;
-    if (tryAlternateArtwork(img)) return;
 
     const host = img.closest(ART_HOST_SELECTOR);
     if (!host) return;
@@ -80,16 +205,27 @@
     img.remove();
   }
 
+  async function recoverArtwork(img) {
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.complete && img.naturalWidth && img.style.display !== 'none') return;
+    if (tryAlternateArtwork(img)) return;
+    if (await tryCanonicalArtwork(img)) return;
+    repairImage(img);
+  }
+
   function scanBrokenArtwork(root = document) {
     $$(`${ART_HOST_SELECTOR} img`, root).forEach(img => {
-      if (img.complete && (!img.naturalWidth || img.style.display === 'none')) repairImage(img);
+      if (img.complete && (!img.naturalWidth || img.style.display === 'none')) void recoverArtwork(img);
     });
   }
 
   window.addEventListener('error', event => {
     if (!(event.target instanceof HTMLImageElement)) return;
-    if (tryAlternateArtwork(event.target)) return;
-    setTimeout(() => repairImage(event.target), 0);
+    // The original card markup has a legacy inline onerror that hides the image.
+    // Remove it during capture so a successful alternate/canonical retry remains visible.
+    event.target.onerror = null;
+    event.target.removeAttribute('onerror');
+    void recoverArtwork(event.target);
   }, true);
 
   function enforceInactiveViewIsolation() {
@@ -149,6 +285,7 @@
       version: VERSION,
       repairArtwork: scanBrokenArtwork,
       tryAlternateArtwork,
+      tryCanonicalArtwork,
       runMaintenance
     };
   }
