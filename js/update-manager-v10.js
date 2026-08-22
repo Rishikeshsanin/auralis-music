@@ -2,15 +2,22 @@
   const VERSION = '10.0.0';
   const WORKER_VERSION = '18';
   const MIGRATION_KEY = 'auralis:update-migration:v10';
+  const MIGRATION_ATTEMPTS_KEY = 'auralis:update-migration-attempts:v10';
   const RELOAD_KEY = 'auralis:update-reload:v10';
   const UPDATE_INTERVAL = 30 * 60 * 1000;
   const LEGACY_CACHE_PREFIXES = ['auralis-shell-', 'auralis-runtime-'];
+  const CURRENT_SCRIPT = document.currentScript?.src || new URL('./js/update-manager-v10.js', location.href).href;
+  const JS_ROOT = new URL('./', CURRENT_SCRIPT);
+  const APP_URL = new URL(`app-v3.js?v=${encodeURIComponent(VERSION)}`, JS_ROOT).href;
+  const ROW_TARGETS_URL = new URL(`row-play-targets.js?v=${encodeURIComponent(VERSION)}`, JS_ROOT).href;
+  const WORKER_URL = new URL('../sw.js', JS_ROOT).href;
 
   let registration = null;
   let waitingWorker = null;
   let reloadArmed = false;
   let lastUpdateCheck = 0;
   let appStarted = false;
+  let originalRegister = null;
 
   function safeStorageGet(storage, key) {
     try { return storage.getItem(key); } catch { return null; }
@@ -74,7 +81,7 @@
     return htmlAudioActive || youtubeActive;
   }
 
-  function queryControllerVersion(timeout = 450) {
+  function queryControllerVersion(timeout = 500) {
     const controller = navigator.serviceWorker?.controller;
     if (!controller || typeof MessageChannel === 'undefined') return Promise.resolve(null);
     return new Promise(resolve => {
@@ -117,14 +124,31 @@
       .map(item => item.unregister()));
   }
 
+  function migrationAttempts() {
+    return Math.max(0, Number(safeStorageGet(sessionStorage, MIGRATION_ATTEMPTS_KEY) || 0));
+  }
+
   async function migrateLegacyRuntime() {
+    const attempts = migrationAttempts() + 1;
+    safeStorageSet(sessionStorage, MIGRATION_ATTEMPTS_KEY, String(attempts));
     addStatusOverlay('Removing only old Auralis runtime caches. Your likes, playlists, history, profile and Aura preferences are not touched.');
+
     try {
       await unregisterCurrentOriginWorkers();
       await clearLegacyCaches();
       safeStorageSet(localStorage, MIGRATION_KEY, VERSION);
+
+      if (attempts > 2) {
+        const overlay = addStatusOverlay('The browser is still holding an older Auralis controller. Continue in online mode now; the worker will be installed again after this tab is clean.');
+        const strong = overlay.querySelector('strong');
+        if (strong) strong.textContent = 'Auralis recovered from a stubborn old worker';
+        removeStatusOverlay();
+        return false;
+      }
+
       const next = new URL(location.href);
       next.searchParams.set('auralis-upgraded', VERSION);
+      next.searchParams.set('migration', String(attempts));
       location.replace(next.toString());
       return true;
     } catch (error) {
@@ -138,13 +162,14 @@
 
   function loadClassicScript(src) {
     return new Promise((resolve, reject) => {
-      if ([...document.scripts].some(script => script.src === new URL(src, location.href).href)) return resolve();
+      const absolute = new URL(src, location.href).href;
+      if ([...document.scripts].some(script => script.src === absolute)) return resolve();
       const script = document.createElement('script');
-      script.src = src;
+      script.src = absolute;
       script.async = false;
       script.dataset.auralisReleaseAsset = VERSION;
       script.onload = resolve;
-      script.onerror = () => reject(new Error(`Could not load ${src}`));
+      script.onerror = () => reject(new Error(`Could not load ${absolute}`));
       document.body.append(script);
     });
   }
@@ -154,9 +179,10 @@
     appStarted = true;
     removeStatusOverlay();
     try {
-      await loadClassicScript(`./js/row-play-targets.js?v=${encodeURIComponent(VERSION)}`);
-      await import(`./app-v3.js?v=${encodeURIComponent(VERSION)}`);
+      await loadClassicScript(ROW_TARGETS_URL);
+      await import(APP_URL);
       document.documentElement.dataset.auralisRuntime = VERSION;
+      safeStorageRemove(sessionStorage, MIGRATION_ATTEMPTS_KEY);
       window.dispatchEvent(new CustomEvent('auralis:runtime-ready', { detail: { version: VERSION } }));
     } catch (error) {
       appStarted = false;
@@ -205,10 +231,25 @@
     });
   }
 
+  function installRegistrationGuard() {
+    if (!('serviceWorker' in navigator) || originalRegister) return;
+    try {
+      originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+      navigator.serviceWorker.register = (scriptURL, options = {}) => {
+        let isAuralisWorker = false;
+        try { isAuralisWorker = new URL(scriptURL, location.href).href === WORKER_URL; } catch {}
+        return originalRegister(scriptURL, isAuralisWorker ? { ...options, updateViaCache: 'none' } : options);
+      };
+    } catch {
+      originalRegister = null;
+    }
+  }
+
   async function registerSafeWorker() {
     if (!('serviceWorker' in navigator)) return;
     try {
-      const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+      const register = originalRegister || navigator.serviceWorker.register.bind(navigator.serviceWorker);
+      const reg = await register(WORKER_URL, { updateViaCache: 'none' });
       watchRegistration(reg);
       lastUpdateCheck = Date.now();
       reg.update().catch(() => {});
@@ -225,6 +266,7 @@
 
   function bindUpdateLifecycle() {
     if (!('serviceWorker' in navigator)) return;
+    installRegistrationGuard();
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!reloadArmed && safeStorageGet(sessionStorage, RELOAD_KEY) !== 'armed') return;
       safeStorageRemove(sessionStorage, RELOAD_KEY);
@@ -244,10 +286,11 @@
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       const controllerVersion = await queryControllerVersion();
       if (controllerVersion !== WORKER_VERSION) {
-        await migrateLegacyRuntime();
-        return;
+        const navigationStarted = await migrateLegacyRuntime();
+        if (navigationStarted) return;
+      } else {
+        safeStorageSet(localStorage, MIGRATION_KEY, VERSION);
       }
-      safeStorageSet(localStorage, MIGRATION_KEY, VERSION);
     }
 
     await startApplication();
