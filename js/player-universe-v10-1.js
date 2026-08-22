@@ -6,7 +6,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"':'&quot;'
   }[char]));
 
   const queueState = {
@@ -356,7 +356,7 @@
       videoMode = !videoMode;
       saveVideoPreference();
       syncVideoMode();
-      toast(videoMode ? 'Video mode on' : 'Video mode off', videoMode ? 'YouTube full playback will show the embedded video player.' : 'Full songs keep playing while the video panel stays hidden.');
+      toast(videoMode ? 'Video mode expanded' : 'Video mode compact', videoMode ? 'YouTube full playback will use the larger embedded video player.' : 'Full playback stays in a compact, visible official YouTube player.');
     });
     extras.insertBefore(button, queue);
   }
@@ -371,8 +371,8 @@
       button.classList.toggle('playing-video', active);
       button.setAttribute('aria-pressed', String(videoMode));
       button.title = active
-        ? (videoMode ? 'Hide video player (audio keeps playing)' : 'Show video player')
-        : (videoMode ? 'Video mode is on for full playback' : 'Video mode is off for full playback');
+        ? (videoMode ? 'Use compact video player' : 'Expand video player')
+        : (videoMode ? 'Expanded video mode is on for full playback' : 'Compact video mode is on for full playback');
     }
   }
 
