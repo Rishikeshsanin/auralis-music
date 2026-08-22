@@ -74,5 +74,7 @@
   else start();
 })();
 
-// Load the v9 Music Graph as a progressive enhancement after the proven v7/v8 shell.
-import('./music-graph-v9.js').catch(error => console.warn('Auralis Music Graph v9 did not start', error));
+// Progressive release chain: proven v7/v8 shell → Music Graph v9 → Full Playback v9.1.
+import('./music-graph-v9.js')
+  .then(() => import('./full-playback-v9-1.js'))
+  .catch(error => console.warn('Auralis Music Graph / Full Playback did not start', error));
