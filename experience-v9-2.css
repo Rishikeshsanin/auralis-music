@@ -1,0 +1,41 @@
+/* Auralis v9.2 — UX reliability patch */
+
+/* v5/v6 accidentally forced Radio visible on every page via an ID selector.
+   The active-view contract wins here so song search always appears before/without Radio. */
+#radioView.view:not(.active-view){display:none!important}
+#radioView.view.active-view{display:flex!important;flex-direction:column}
+
+/* Broken provider artwork must never leave an empty card. */
+.auralis-art-host-v92{position:relative!important;overflow:hidden}
+.auralis-art-fallback-v92{position:absolute;inset:0;z-index:0;display:grid;place-items:center;pointer-events:none;background:
+  radial-gradient(circle at 22% 18%,color-mix(in srgb,var(--accent,#8b5cf6) 28%,transparent),transparent 40%),
+  radial-gradient(circle at 82% 78%,color-mix(in srgb,var(--accent-2,#65d2ff) 14%,transparent),transparent 42%),
+  linear-gradient(145deg,#171a24,#0d0f16);color:rgba(255,255,255,.84);font-weight:900;letter-spacing:-.04em;text-shadow:0 8px 24px rgba(0,0,0,.28)}
+.cover-wrap>.auralis-art-fallback-v92{font-size:clamp(1.6rem,3vw,2.8rem)}
+.row-cover>.auralis-art-fallback-v92,.queue-item-cover>.auralis-art-fallback-v92,.player-cover>.auralis-art-fallback-v92,.radio-logo>.auralis-art-fallback-v92,.v5-radio-logo>.auralis-art-fallback-v92,.v91-now-art>.auralis-art-fallback-v92{font-size:.78rem}
+.auralis-art-host-v92>img{position:relative;z-index:1}
+.cover-wrap>.provider-badge,.cover-wrap>.card-play,.cover-wrap>.live-mini{z-index:3}
+
+/* Full playback remains visible (YouTube requirement) but defaults to a compact mini-player. */
+.v92-dock-actions{display:flex;align-items:center;gap:6px;position:relative;z-index:2}
+.v92-dock-actions button{flex:none}
+.v91-playback-dock.minimized-v92{width:min(236px,calc(100vw - 20px));padding:8px;border-radius:18px;right:12px;bottom:104px}
+.v91-playback-dock.minimized-v92::before{opacity:.55;height:160px}
+.v91-playback-dock.minimized-v92 .v91-dock-head{padding:0 0 7px}
+.v91-playback-dock.minimized-v92 .v91-dock-head>div{grid-template-columns:auto auto;column-gap:6px}
+.v91-playback-dock.minimized-v92 .v91-dock-head strong{font-size:.62rem;letter-spacing:.11em}
+.v91-playback-dock.minimized-v92 .v91-dock-head small{display:none}
+.v91-playback-dock.minimized-v92 .v91-source-dot{grid-row:1;width:7px;height:7px}
+.v91-playback-dock.minimized-v92 .v91-video-shell{height:200px;min-height:200px;border-radius:13px}
+.v91-playback-dock.minimized-v92 #youtubePlayerMountV91,
+.v91-playback-dock.minimized-v92 #youtubePlayerMountV91>div,
+.v91-playback-dock.minimized-v92 #youtubePlayerMountV91 iframe{min-width:200px!important;min-height:200px!important}
+.v91-playback-dock.minimized-v92 .v91-now-playing{display:none}
+
+@media(max-width:720px){
+  .v91-playback-dock.minimized-v92{right:10px;bottom:136px;width:min(236px,calc(100vw - 20px));padding:8px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .auralis-art-fallback-v92,.v91-playback-dock.minimized-v92{transition:none!important}
+}
