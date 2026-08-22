@@ -23,6 +23,6 @@ assert '.player.auralis-player-loading::before' in css and '.aura-toggle.active'
 assert 'html.aura-mode-on .sidebar' in aura_css and 'html.aura-mode-on .player' in aura_css and '.nav-item.active' in aura_css, 'Aura Mode does not reach core surfaces'
 assert '@property --aura-primary' in aura_v8 and 'auraLiquidA' in aura_v8 and 'auraLiquidB' in aura_v8, 'Liquid Aura field missing'
 assert 'html.aura-mode-on .hero' in aura_v8 and 'html.aura-mode-on .music-card' in aura_v8 and '--accent: var(--aura-primary)' in aura_v8, 'Aura v8 is not a full-site theme'
-assert 'auralis-shell-v14' in sw and 'auralis-experience-v7.js' in sw and 'konkani-radio-v7.js' in sw and 'experience-v8-aura.css' in sw, 'PWA v14 shell must retain Experience v7/v8 assets'
+assert 'auralis-shell-v15' in sw and 'auralis-experience-v7.js' in sw and 'konkani-radio-v7.js' in sw and 'experience-v8-aura.css' in sw, 'PWA v15 shell must retain Experience v7/v8 assets'
 
 print('Auralis Experience v7/v8 regression tests passed')

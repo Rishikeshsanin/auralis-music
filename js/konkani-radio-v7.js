@@ -74,7 +74,8 @@
   else start();
 })();
 
-// Progressive release chain: proven v7/v8 shell → Music Graph v9 → Full Playback v9.1.
+// Progressive release chain: proven v7/v8 shell → Music Graph v9 → Full Playback v9.1 → UX Reliability v9.2.
 import('./music-graph-v9.js')
   .then(() => import('./full-playback-v9-1.js'))
-  .catch(error => console.warn('Auralis Music Graph / Full Playback did not start', error));
+  .then(() => import('./ux-reliability-v9-2.js'))
+  .catch(error => console.warn('Auralis Music Graph / Full Playback / UX Reliability did not start', error));

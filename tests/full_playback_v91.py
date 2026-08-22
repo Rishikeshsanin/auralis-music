@@ -30,7 +30,7 @@ assert '.v91-playback-dock' in css and 'min-height:200px' in css, 'visible YouTu
 assert '@media(max-width:720px)' in css, 'mobile full-playback layout missing'
 assert 'prefers-reduced-motion' in css, 'reduced motion support missing'
 assert "import('./full-playback-v9-1.js')" in konkani, 'v9.1 progressive boot missing'
-assert 'auralis-shell-v14' in sw and './experience-v9-1.css' in sw and './js/full-playback-v9-1.js' in sw, 'v9.1 assets missing from PWA v14 shell'
+assert 'auralis-shell-v15' in sw and './experience-v9-1.css' in sw and './js/full-playback-v9-1.js' in sw, 'v9.1 assets missing from PWA v15 shell'
 assert 'node --check js/full-playback-v9-1.js' in workflow and 'python tests/full_playback_v91.py' in workflow, 'CI does not validate Full Playback v9.1'
 
 print('Auralis Full Playback v9.1 regression tests passed')
