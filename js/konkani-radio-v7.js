@@ -50,7 +50,7 @@
     if (Date.now() - lastAppliedAt < 500) return;
     working = true;
     try {
-      const response = await fetch('/api/radio?mode=search&q=AmchiKONKANI&limit=3', { headers: { Accept: 'application/json' } });
+      const response = await fetch('/api/radio?mode=search&q=AmchiKONKANI&limit=3', { headers: { Accept } });
       if (!response.ok) return;
       const json = await response.json();
       const station = (json.stations || []).find(item => /amchikonkani/i.test(item.name || '') && item.auralis_verified);
@@ -90,10 +90,11 @@ import('./update-manager-v10.js')
   .catch(error => console.warn('Auralis Stability Update Manager did not start', error));
 
 // Progressive release chain: v7/v8 → Music Graph v9 → Full Playback v9.1 → UX v9.2
-// → Playback Recovery v9.2.1 → Player + Universe interaction layer v10.1.
+// → Playback Recovery v9.2.1 → Player + Universe v10.1 → final product polish.
 import('./music-graph-v9.js')
   .then(() => import('./full-playback-v9-1.js'))
   .then(() => import('./ux-reliability-v9-2.js'))
   .then(() => import('./playback-recovery-v9-2-1.js'))
   .then(() => import('./player-universe-v10-1.js'))
-  .catch(error => console.warn('Auralis Music Graph / Full Playback / UX Reliability / Playback Recovery / Player Universe did not start', error));
+  .then(() => import('./product-polish-v10-1.js'))
+  .catch(error => console.warn('Auralis progressive product layer did not start', error));
