@@ -1,6 +1,6 @@
 # Auralis v10.1 — Player + Universe Release
 
-**Status: Merged to `main`; production promotion pending Vercel build quota**  
+**Status: Live in production**  
 Release branch: `release/player-universe-v10-1`  
 Production target: `main` → Vercel  
 Release date: 2026-08-22
@@ -151,7 +151,7 @@ Production alias:
 
 https://auralis-music-lime.vercel.app
 
-The tested v10.1 preview is READY and can be promoted directly without rebuilding once Vercel allows production traffic to be pointed at it.
+Auralis v10.1 is live on Vercel production. The promoted production deployment is based on the exact approved compact-player / hide-only-video build (`c4410eca8782f94df899ed1911488fb21f71783d`).
 
 Repository:
 
