@@ -1,6 +1,7 @@
 (() => {
   let working = false;
   let lastAppliedAt = 0;
+  let enforceTimer = null;
 
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#039;', '"':'&quot;' }[char]));
@@ -64,7 +65,15 @@
     }
   }
 
-  const observer = new MutationObserver(() => setTimeout(enforce, 120));
+  function scheduleEnforce() {
+    if (enforceTimer) return;
+    enforceTimer = setTimeout(() => {
+      enforceTimer = null;
+      enforce();
+    }, 120);
+  }
+
+  const observer = new MutationObserver(scheduleEnforce);
   const start = () => {
     enforce();
     observer.observe(document.body, { childList: true, subtree: true });
@@ -73,6 +82,12 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })();
+
+// Stability v10 supervises the service-worker lifecycle in parallel with the
+// progressive product-release chain. In today's direct-boot shell it does not
+// start a second app instance; it only owns migration/update behavior.
+import('./update-manager-v10.js')
+  .catch(error => console.warn('Auralis Stability Update Manager did not start', error));
 
 // Progressive release chain: v7/v8 → Music Graph v9 → Full Playback v9.1 → UX v9.2 → Playback Recovery v9.2.1.
 import('./music-graph-v9.js')

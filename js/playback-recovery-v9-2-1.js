@@ -5,6 +5,9 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, char => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#039;', '"':'&quot;'
+  }[char]));
 
   function trackKey(track = {}) {
     return [track.title, track.artist, track.album].map(value => clean(value).toLowerCase()).join('|');
@@ -15,7 +18,7 @@
     if (!region) return;
     const node = document.createElement('div');
     node.className = 'toast v9-toast v921-toast';
-    node.innerHTML = `<strong>${String(title || '')}</strong>${detail ? `<small>${String(detail || '')}</small>` : ''}`;
+    node.innerHTML = `<strong>${escapeHtml(title)}</strong>${detail ? `<small>${escapeHtml(detail)}</small>` : ''}`;
     region.append(node);
     setTimeout(() => node.remove(), 4200);
   }
@@ -100,12 +103,8 @@
       attempted.add(next.id);
       updateCandidateUi(track, next);
       toast('Trying another full source', `${track.title} · ${next.channel || 'YouTube'}`);
-      try {
-        event.target.loadVideoById(next.id);
-        event.target.playVideo();
-      } catch (error) {
-        throw error;
-      }
+      event.target.loadVideoById(next.id);
+      event.target.playVideo();
     } catch (error) {
       loader(`${error.message || 'Full playback failed.'} Tap ▶ Full to retry.`, true);
       toast('Full playback source failed', `YouTube error ${event?.data ?? 'unknown'} · ${error.message || 'Try again.'}`);
@@ -171,10 +170,11 @@
   }
 
   function start() {
+    // The v9.1 dock is created before this recovery module in the progressive
+    // chain and persists for the page lifetime, so a body-wide observer is not
+    // required just to attach one tap-to-start listener.
     wireTapToStart();
     installBeforeIframeApi();
-    const observer = new MutationObserver(() => wireTapToStart());
-    observer.observe(document.body, { childList: true, subtree: true });
     window.AuralisPlaybackRecoveryV921 = { version: VERSION, patchPlayer };
   }
 
