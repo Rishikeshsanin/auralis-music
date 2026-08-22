@@ -20,6 +20,6 @@ assert "radio.getAttribute('aria-hidden') !== next" in ux, 'radio aria mutation 
 assert 'requestAnimationFrame(runMaintenance)' in ux and 'maintenanceQueued' in ux, 'mutation maintenance must be frame-coalesced'
 assert "attributeFilter: ['class']" in ux and "'style'" not in ux.split('observer.observe(document.body', 1)[1], 'observer must not react to high-frequency style updates'
 assert "import('./ux-reliability-v9-2.js')" in konkani, 'v9.2 UX layer is not in the progressive boot chain'
-assert 'auralis-shell-v17' in sw and './experience-v9-2.css' in sw and './js/ux-reliability-v9-2.js' in sw, 'PWA v17 must ship the freeze hotfix'
+assert "const WORKER_VERSION = '18'" in sw and "auralis-runtime-v18" in sw, 'stability worker v18 must supersede legacy shell caching'
 
 print('Auralis UX Reliability v9.2.2 regression tests passed')
