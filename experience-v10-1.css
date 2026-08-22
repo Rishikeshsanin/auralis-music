@@ -14,8 +14,8 @@
   font-weight: 800;
 }
 
-/* Bottom player video-mode control. The YouTube iframe remains mounted while
-   hidden so playback is not interrupted when the user switches video off. */
+/* Bottom player video-mode control. Compact mode keeps the official YouTube
+   player visible and interactive while making it much less intrusive. */
 .v101-video-toggle {
   min-width: 58px;
   height: 38px;
@@ -37,10 +37,26 @@
 .v101-video-toggle.active { color:#fff; border-color:color-mix(in srgb,var(--accent,#8b5cf6) 48%,rgba(255,255,255,.1)); background:color-mix(in srgb,var(--accent,#8b5cf6) 13%,rgba(255,255,255,.035)); }
 .v101-video-toggle.playing-video::after { content:""; width:6px; height:6px; border-radius:50%; background:#ff315d; box-shadow:0 0 10px rgba(255,49,93,.65); }
 body.v101-video-mode-off .v91-playback-dock.open {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: translateY(18px) scale(.98) !important;
+  width:min(230px,calc(100vw - 24px));
+  padding:8px;
+  opacity:1 !important;
+  pointer-events:auto !important;
+  transform:none !important;
+  border-radius:18px;
 }
+body.v101-video-mode-off .v91-playback-dock.open .v91-video-shell {
+  height:124px;
+  min-height:124px;
+  border-radius:13px;
+}
+body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91,
+body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91>div,
+body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91 iframe {
+  min-height:124px !important;
+}
+body.v101-video-mode-off .v91-playback-dock.open .v91-now-playing { display:none; }
+body.v101-video-mode-off .v91-playback-dock.open .v91-dock-head { padding-bottom:7px; }
+body.v101-video-mode-off .v91-playback-dock.open .v91-dock-head small { display:none; }
 
 /* Explicit queue controls across direct music, radio and Music Graph results. */
 .cover-wrap .v101-add-queue-card {
@@ -202,6 +218,11 @@ body.v101-video-mode-off .v91-playback-dock.open {
 @media(max-width:720px) {
   .v101-video-toggle { min-width:38px; width:38px; padding:0; }
   .v101-video-toggle small { display:none; }
+  body.v101-video-mode-off .v91-playback-dock.open { right:10px; width:min(210px,calc(100vw - 20px)); }
+  body.v101-video-mode-off .v91-playback-dock.open .v91-video-shell { height:112px; min-height:112px; }
+  body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91,
+  body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91>div,
+  body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91 iframe { min-height:112px !important; }
   .cover-wrap .v101-add-queue-card,.v101-add-queue-radio,.v101-add-queue-row { opacity:1; }
   .v101-liked-row { grid-template-columns:40px minmax(0,1fr) 32px 32px; }
   .v101-liked-row [data-v101-liked-play] { grid-column:2 / -1; width:100%; }
