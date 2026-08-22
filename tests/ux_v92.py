@@ -11,7 +11,8 @@ assert "#radioView.view.active-view{display:flex!important" in css, 'Radio must 
 assert 'ART_HOST_SELECTOR' in ux and 'repairImage' in ux and 'auralis-art-fallback-v92' in ux, 'global artwork failure recovery missing'
 assert "window.addEventListener('error'" in ux and 'HTMLImageElement' in ux, 'runtime image failures are not captured'
 assert 'scanBrokenArtwork' in ux and 'naturalWidth' in ux, 'already-failed cached images are not repaired'
-assert 'restorePlaybackDockContract' in ux and 'minimized-v92' not in ux, 'v9.2.1 must restore the known-good v9.1 playback dock contract'
+assert 'restorePlaybackDockContract' in ux, 'v9.2.1 must restore the known-good v9.1 playback dock contract'
+assert "classList.toggle('minimized-v92'" not in ux and 'PANEL_KEY' not in ux and 'stopFullPlaybackV92' not in ux, 'v9.2.1 must not intercept or minimize the YouTube playback dock'
 assert "import('./ux-reliability-v9-2.js')" in konkani, 'v9.2 UX layer is not in the progressive boot chain'
 assert 'auralis-shell-v15' in sw and './experience-v9-2.css' in sw and './js/ux-reliability-v9-2.js' in sw, 'PWA shell must retain v9.2 assets'
 
