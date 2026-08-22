@@ -3,6 +3,8 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ART_HOST_SELECTOR = '.cover-wrap,.row-cover,.queue-item-cover,.player-cover,.radio-logo,.v5-radio-logo,.v91-now-art';
+  const ART_OWNER_SELECTOR = '.music-card,.track-row,.queue-item,.player,.v91-playback-dock';
+  const ART_SIZES = ['1000x1000', '480x480', '150x150'];
   let maintenanceQueued = false;
 
   function loadCss() {
@@ -31,8 +33,39 @@
     return words.slice(0, 2).map(word => word[0]).join('').toLocaleUpperCase();
   }
 
+  function isAudiusArtwork(img, src = '') {
+    const ownerText = clean(img.closest(ART_OWNER_SELECTOR)?.textContent || '');
+    return /\bAudius\b/i.test(ownerText) || /audius|creatornode|discoveryprovider/i.test(src);
+  }
+
+  function tryAlternateArtwork(img) {
+    if (!(img instanceof HTMLImageElement)) return false;
+    const src = clean(img.currentSrc || img.src || '');
+    if (!src || !isAudiusArtwork(img, src)) return false;
+
+    const match = src.match(/(1000x1000|480x480|150x150)/i);
+    if (!match) return false;
+
+    const currentSize = match[1].toLowerCase();
+    const tried = new Set((img.dataset.auralisArtSizes || '').split(',').filter(Boolean));
+    tried.add(currentSize);
+    const nextSize = ART_SIZES.find(size => !tried.has(size));
+    if (!nextSize) return false;
+
+    tried.add(nextSize);
+    img.dataset.auralisArtSizes = [...tried].join(',');
+    img.dataset.auralisArtRepaired = 'false';
+    img.style.display = '';
+    img.src = src.replace(match[1], nextSize);
+    return true;
+  }
+
   function repairImage(img) {
     if (!(img instanceof HTMLImageElement) || img.dataset.auralisArtRepaired === 'true') return;
+    if (!img.complete) return;
+    if (img.naturalWidth && img.style.display !== 'none') return;
+    if (tryAlternateArtwork(img)) return;
+
     const host = img.closest(ART_HOST_SELECTOR);
     if (!host) return;
     img.dataset.auralisArtRepaired = 'true';
@@ -55,6 +88,7 @@
 
   window.addEventListener('error', event => {
     if (!(event.target instanceof HTMLImageElement)) return;
+    if (tryAlternateArtwork(event.target)) return;
     setTimeout(() => repairImage(event.target), 0);
   }, true);
 
@@ -114,6 +148,7 @@
     window.AuralisUXV92 = {
       version: VERSION,
       repairArtwork: scanBrokenArtwork,
+      tryAlternateArtwork,
       runMaintenance
     };
   }
