@@ -1,6 +1,6 @@
 # Auralis v10.1 — Player + Universe Release
 
-**Status: Released to production**  
+**Status: Merged to `main`; production promotion pending Vercel build quota**  
 Release branch: `release/player-universe-v10-1`  
 Production target: `main` → Vercel  
 Release date: 2026-08-22
@@ -147,9 +147,11 @@ Local user data such as playlists, likes, history, profile preferences, Aura set
 
 ## Production
 
-Auralis production:
+Production alias:
 
 https://auralis-music-lime.vercel.app
+
+The tested v10.1 preview is READY and can be promoted directly without rebuilding once Vercel allows production traffic to be pointed at it.
 
 Repository:
 
