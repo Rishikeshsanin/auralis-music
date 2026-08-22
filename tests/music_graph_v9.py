@@ -16,6 +16,7 @@ for name in required:
 html = (root / 'index.html').read_text()
 app = (root / 'js/music-graph-v9.js').read_text()
 css = (root / 'experience-v9.css').read_text()
+fixes = (root / 'fixes.css').read_text()
 catalog = (root / 'api/catalog.js').read_text()
 providers = (root / 'api/providers.js').read_text()
 youtube = (root / 'api/youtube.js').read_text()
@@ -74,6 +75,13 @@ assert 'www.googleapis.com/youtube/v3/search' in youtube, 'Official YouTube Data
 assert 'v9-skeleton' in css and '@keyframes' in css, 'v9 loading animation missing'
 assert 'prefers-reduced-motion' in css, 'Reduced-motion support missing'
 assert 'v9-provider-row' in css and 'v9-graph-card' in css and 'v9-playlist-card' in css, 'v9 major surfaces not styled'
+
+# Dynamic v9 drawers are injected immediately after an asynchronous CSS link is
+# appended. The base reliability stylesheet must hide them before v9 CSS lands,
+# while preserving the exact same open/show class behavior after a user action.
+assert '.v9-modal,' in fixes and '.v9-modal-backdrop' in fixes and 'visibility: hidden' in fixes, 'v9 drawer startup flash guard missing'
+assert '.v9-modal.open,' in fixes and '.v9-modal-backdrop.show' in fixes and 'visibility: visible' in fixes, 'v9 drawer explicit-open visibility contract missing'
+assert "loadProviderStatus({ open: true })" in app and "classList.add('open')" in app, 'Source Pulse click/open behavior must remain intact'
 
 # PWA shell
 assert "auralis-shell-v15" in sw, 'PWA cache was not bumped to v15'

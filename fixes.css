@@ -66,6 +66,20 @@ body {
   touch-action: pan-y;
 }
 
+/* Music Graph v9 injects its drawers before its optional stylesheet finishes
+   loading. Keep those dynamically-created surfaces invisible until they are
+   explicitly opened so they cannot flash in-flow and then slide sideways at
+   startup. Open/close classes still control the exact same drawer behavior. */
+.v9-modal,
+.v9-modal-backdrop {
+  visibility: hidden;
+}
+
+.v9-modal.open,
+.v9-modal-backdrop.show {
+  visibility: visible;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     height: calc(100dvh - var(--player-h));
