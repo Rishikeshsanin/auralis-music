@@ -1,5 +1,6 @@
 # Auralis v10.1 — Player + Universe Release
 
+**Status: Released to production**  
 Release branch: `release/player-universe-v10-1`  
 Production target: `main` → Vercel  
 Release date: 2026-08-22
