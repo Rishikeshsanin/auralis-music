@@ -1,10 +1,30 @@
 const BASE = 'https://api.audius.co/v1';
 const APP_NAME = 'AuralisMusic';
 
-function artworkOf(track) {
+function validArtworkUrl(value) {
+  if (typeof value !== 'string') return '';
+  const url = value.trim();
+  return /^https?:\/\//i.test(url) ? url : '';
+}
+
+function artworkCandidates(track) {
   const art = track?.artwork;
-  if (!art) return '';
-  return art['480x480'] || art['150x150'] || art['1000x1000'] || art._480x480 || art._150x150 || art._1000x1000 || '';
+  if (!art) return [];
+  const mirrors = Array.isArray(art.mirrors) ? art.mirrors : [];
+  const candidates = [
+    ...mirrors,
+    art['1000x1000'],
+    art['480x480'],
+    art['150x150'],
+    art._1000x1000,
+    art._480x480,
+    art._150x150
+  ].map(validArtworkUrl).filter(Boolean);
+  return [...new Set(candidates)];
+}
+
+function artworkOf(track) {
+  return artworkCandidates(track)[0] || '';
 }
 
 function streamableValue(track) {
@@ -23,6 +43,7 @@ function normalize(track) {
     artist: track.user?.name || track.user?.handle || 'Unknown artist',
     artistHandle: track.user?.handle || '',
     artwork: artworkOf(track),
+    artworkCandidates: artworkCandidates(track),
     duration: Number(track.duration || 0),
     genre: track.genre || track.mood || 'Open music',
     playCount: Number(track.play_count ?? track.playCount ?? 0),
