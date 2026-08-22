@@ -33,10 +33,14 @@ async function networkFirst(request, fallbackRequest = request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE);
   const cached = await cache.match(request);
-  const fresh = fetch(request)
+  const refresh = fetch(request)
     .then(response => putSafe(cache, request, response))
     .catch(() => null);
-  return cached || fresh || Response.error();
+  if (cached) {
+    refresh.catch(() => {});
+    return cached;
+  }
+  return (await refresh) || Response.error();
 }
 
 self.addEventListener('install', event => {
