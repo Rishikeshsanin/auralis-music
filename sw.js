@@ -1,6 +1,8 @@
 const WORKER_VERSION = '18';
 const CACHE = 'auralis-runtime-v18';
 const CACHE_PREFIXES = ['auralis-shell-', 'auralis-runtime-'];
+const LEGACY_SHELL_PREFIX = 'auralis-shell-';
+const MIGRATION_MARKER = new URL('./__auralis_legacy_migration__', self.location.href).href;
 const OFFLINE_FALLBACK = new URL('./index.html', self.location.href).href;
 const PRECACHE = [
   new URL('./index.html', self.location.href).href,
@@ -43,12 +45,53 @@ async function staleWhileRevalidate(request) {
   return (await refresh) || Response.error();
 }
 
-self.addEventListener('install', event => {
-  // Updates intentionally remain in the waiting state. The page-side update
-  // manager activates them only when playback is idle (or the user accepts
-  // the refresh), preventing mid-song/mid-runtime worker takeovers.
-  event.waitUntil((async () => {
+async function hasLegacyShellCache() {
+  try {
+    const keys = await caches.keys();
+    return keys.some(key => key.startsWith(LEGACY_SHELL_PREFIX));
+  } catch {
+    return false;
+  }
+}
+
+async function markLegacyMigration(cache) {
+  try {
+    await cache.put(MIGRATION_MARKER, new Response('legacy-shell-upgrade', {
+      headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' }
+    }));
+  } catch {}
+}
+
+async function consumeLegacyMigrationMarker() {
+  try {
     const cache = await caches.open(CACHE);
+    const marker = await cache.match(MIGRATION_MARKER);
+    if (!marker) return false;
+    await cache.delete(MIGRATION_MARKER);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function reloadLegacyClientsOnce() {
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  await Promise.allSettled(windows.map(async client => {
+    try {
+      const current = new URL(client.url);
+      if (current.origin !== self.location.origin) return;
+      if (current.searchParams.get('auralis-sw-migrated') === WORKER_VERSION) return;
+      current.searchParams.set('auralis-sw-migrated', WORKER_VERSION);
+      await client.navigate(current.toString());
+    } catch {}
+  }));
+}
+
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const legacyShell = await hasLegacyShellCache();
+    const cache = await caches.open(CACHE);
+
     await Promise.allSettled(PRECACHE.map(async url => {
       const request = new Request(url, { cache: 'reload' });
       try {
@@ -56,6 +99,19 @@ self.addEventListener('install', event => {
         await putSafe(cache, url, response);
       } catch {}
     }));
+
+    if (legacyShell) {
+      // v15-v17 used a cache-first shell that can leave returning users with a
+      // mixed HTML/JS runtime. This is a one-time emergency bridge only for
+      // those legacy caches: clear the stale shell, activate v18, then reload
+      // the affected Auralis tab once. LocalStorage/IndexedDB are untouched.
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(key => key.startsWith(LEGACY_SHELL_PREFIX)).map(key => caches.delete(key)));
+      await markLegacyMigration(cache);
+      await self.skipWaiting();
+    }
+    // Normal v18+ updates do NOT call skipWaiting here; they wait for the
+    // page-side update manager to activate them at a safe time.
   })());
 });
 
@@ -76,7 +132,10 @@ self.addEventListener('activate', event => {
     await Promise.all(keys
       .filter(key => CACHE_PREFIXES.some(prefix => key.startsWith(prefix)) && key !== CACHE)
       .map(key => caches.delete(key)));
+
+    const legacyMigration = await consumeLegacyMigrationMarker();
     await self.clients.claim();
+    if (legacyMigration) await reloadLegacyClientsOnce();
   })());
 });
 
