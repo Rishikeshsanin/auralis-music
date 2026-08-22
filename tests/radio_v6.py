@@ -21,7 +21,7 @@ assert 'radioActiveBlockV6' in engine and 'radioPopularGridV6' in engine, 'pinne
 assert 'tuneThroughAuralis' in engine, 'pinned cards must route through the Auralis player'
 assert '#radioActiveBlockV6 { order:-1; }' in css, 'selected/search results must sit above Popular'
 assert '#radioPopularBlockV5 { order:0; }' in css, 'Popular must remain pinned at the top level'
-assert 'auralis-shell-v13' in sw and 'experience-v6.css' in sw and 'radio-reliability-v6.js' in sw, 'Current PWA shell must retain radio v6 assets'
+assert 'auralis-shell-v14' in sw and 'experience-v6.css' in sw and 'radio-reliability-v6.js' in sw, 'Current PWA shell must retain radio v6 assets'
 assert 'node --check js/radio-reliability-v6.js' in workflow and 'python tests/radio_v6.py' in workflow, 'CI does not validate radio v6'
 
 print('Auralis Radio Reliability v6 regression tests passed')
