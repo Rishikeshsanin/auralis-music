@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '10.1.4';
+  const VERSION = '10.1.5';
   const $ = (selector, root = document) => root?.querySelector?.(selector) || null;
   const $$ = (selector, root = document) => root?.querySelectorAll ? [...root.querySelectorAll(selector)] : [];
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
@@ -412,14 +412,21 @@
 
   function runScan() {
     state.scanQueued = false;
-    syncVideoPopup();
     scanFallbacks();
   }
 
   function scheduleScan() {
     if (state.scanQueued) return;
     state.scanQueued = true;
-    requestAnimationFrame(runScan);
+    const run = () => runScan();
+    if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 600 });
+    else setTimeout(run, 40);
+  }
+
+  function addedNodeNeedsArtworkScan(node) {
+    if (!(node instanceof HTMLElement)) return false;
+    if (node.matches('.v1011-branded-art')) return true;
+    return Boolean(node.querySelector?.('.v1011-branded-art'));
   }
 
   function start() {
@@ -427,14 +434,19 @@
     restoreVideoShellToDock();
     installTrendingGridGuard();
     syncVideoPopup();
-    scanFallbacks();
+    scheduleScan();
+
     window.addEventListener('click', event => {
       const target = event.target;
       if (target instanceof Element && target.closest('#playButton,[data-play-index],.music-card')) {
         markTrendingPreserveWindow();
       }
+      if (target instanceof Element && target.closest('[data-view],[data-view-trigger]')) {
+        scheduleScan();
+      }
       interceptVideoControls(event);
     }, true);
+
     document.addEventListener('play', event => {
       if (event.target?.id === 'audio') markTrendingPreserveWindow();
     }, true);
@@ -443,14 +455,30 @@
     }, true);
 
     const observer = new MutationObserver(records => {
+      let needsArtworkScan = false;
       records.forEach(record => record.addedNodes.forEach(node => {
-        if (node instanceof HTMLElement) suppressVideoToast(node);
+        if (!(node instanceof HTMLElement)) return;
+        suppressVideoToast(node);
+        if (addedNodeNeedsArtworkScan(node)) needsArtworkScan = true;
       }));
-      scheduleScan();
+      if (needsArtworkScan) scheduleScan();
     });
     observer.observe(document.body, { childList:true, subtree:true });
-    window.addEventListener('resize', scheduleScan);
-    setInterval(syncVideoPopup, 350);
+
+    const dock = $('#fullPlaybackDockV91');
+    if (dock) {
+      const videoObserver = new MutationObserver(() => {
+        requestAnimationFrame(syncVideoPopup);
+      });
+      videoObserver.observe(dock, {
+        childList:true,
+        subtree:true,
+        attributes:true,
+        attributeFilter:['class','aria-hidden']
+      });
+    }
+
+    window.addEventListener('resize', () => requestAnimationFrame(syncVideoPopup));
 
     window.AuralisProductHotfixV1012 = {
       version:VERSION,

@@ -67,4 +67,5 @@ jobs:
           python tests/player_universe_v101.py
           python tests/product_polish_v1011.py
           python tests/product_hotfix_v1012.py
+          python tests/performance_v1015.py
           node tests/sw_lifecycle_v10.mjs
