@@ -1,0 +1,250 @@
+/* Auralis v10.1 — player + universe interaction layer */
+
+/* Full-song card CTA should read as a primary peer to Preview, not a tiny utility. */
+.v9-card-actions .v91-full-button {
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 11px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.v9-card-actions .v9-preview-btn,
+.v9-card-actions .v91-full-button {
+  font-weight: 800;
+}
+
+/* Bottom player video-mode control. Compact mode keeps the official YouTube
+   player visible and interactive while making it much less intrusive. */
+.v101-video-toggle {
+  min-width: 58px;
+  height: 38px;
+  padding: 0 9px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 11px;
+  background: rgba(255,255,255,.035);
+  color: #9296a5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: .18s ease;
+}
+.v101-video-toggle span { font-size: 14px; }
+.v101-video-toggle small { font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+.v101-video-toggle:hover { color:#fff; background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.15); }
+.v101-video-toggle.active { color:#fff; border-color:color-mix(in srgb,var(--accent,#8b5cf6) 48%,rgba(255,255,255,.1)); background:color-mix(in srgb,var(--accent,#8b5cf6) 13%,rgba(255,255,255,.035)); }
+.v101-video-toggle.playing-video::after { content:""; width:6px; height:6px; border-radius:50%; background:#ff315d; box-shadow:0 0 10px rgba(255,49,93,.65); }
+body.v101-video-mode-off .v91-playback-dock.open {
+  width:min(230px,calc(100vw - 24px));
+  padding:8px;
+  opacity:1 !important;
+  pointer-events:auto !important;
+  transform:none !important;
+  border-radius:18px;
+}
+body.v101-video-mode-off .v91-playback-dock.open .v91-video-shell {
+  height:124px;
+  min-height:124px;
+  border-radius:13px;
+}
+body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91,
+body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91>div,
+body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91 iframe {
+  min-height:124px !important;
+}
+body.v101-video-mode-off .v91-playback-dock.open .v91-now-playing { display:none; }
+body.v101-video-mode-off .v91-playback-dock.open .v91-dock-head { padding-bottom:7px; }
+body.v101-video-mode-off .v91-playback-dock.open .v91-dock-head small { display:none; }
+
+/* Explicit queue controls across direct music, radio and Music Graph results. */
+.cover-wrap .v101-add-queue-card {
+  position:absolute;
+  right:10px;
+  top:10px;
+  z-index:5;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(7,8,12,.74);
+  color:#fff;
+  opacity:0;
+  transform:translateY(-3px);
+  cursor:pointer;
+  backdrop-filter:blur(10px);
+  transition:.18s ease;
+}
+.music-card:hover .v101-add-queue-card,.music-card:focus-within .v101-add-queue-card { opacity:1; transform:none; }
+
+.track-row,.radio-card,.v9-album-row,.v9-playlist-row { position:relative; }
+.v101-add-queue-row {
+  position:absolute;
+  right:45px;
+  top:50%;
+  translate:0 -50%;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(16,17,24,.9);
+  color:#aeb1be;
+  opacity:0;
+  cursor:pointer;
+  transition:.16s ease;
+}
+.track-row:hover .v101-add-queue-row,.track-row:focus-within .v101-add-queue-row { opacity:1; }
+
+.v101-add-queue-radio {
+  position:absolute;
+  right:54px;
+  top:50%;
+  translate:0 -50%;
+  width:29px;
+  height:29px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(8,9,13,.8);
+  color:#c5c7d0;
+  cursor:pointer;
+  opacity:0;
+  transition:.16s ease;
+}
+.radio-card:hover .v101-add-queue-radio,.radio-card:focus-within .v101-add-queue-radio { opacity:1; }
+
+.v9-card-actions .v101-add-queue-graph,
+.v9-card-actions .v101-graph-like {
+  min-height:34px;
+  padding:0 9px;
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:11px;
+  background:rgba(255,255,255,.025);
+  color:#aeb1bc;
+  cursor:pointer;
+  font-size:10px;
+}
+.v9-card-actions .v101-add-queue-graph:hover,
+.v9-card-actions .v101-graph-like:hover { color:#fff; border-color:rgba(255,255,255,.16); }
+.v101-graph-like.liked,.v101-detail-like.liked { color:#ff6d9c !important; border-color:rgba(255,109,156,.28) !important; }
+
+.v101-add-queue-graph-row,.v101-row-like {
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:999px;
+  min-width:30px;
+  height:28px;
+  padding:0 8px;
+  background:rgba(255,255,255,.035);
+  color:#b2b5c0;
+  cursor:pointer;
+  font-size:10px;
+}
+.v101-row-like { color:#d5a0b4; }
+
+/* v9 rows already contain preview/playlist/full controls. Reserve explicit
+   columns for the v10.1 Like + Queue buttons so the browser never creates
+   implicit sideways grid tracks. */
+.v9-album-row:has([data-v101-graph-like]) {
+  grid-template-columns:28px minmax(0,1fr) 54px 38px 38px 70px 32px 32px;
+}
+.v9-playlist-row:has([data-v101-graph-like]) {
+  grid-template-columns:28px minmax(0,1fr) 38px 70px 38px 32px 32px;
+}
+
+.v101-detail-like,.v101-detail-queue { white-space:nowrap; }
+
+/* Unified queue presentation reuses the existing drawer and does not replace
+   its open/close mechanics. */
+.v101-unified-queue { display:grid; gap:6px; }
+.v101-queue-item { grid-template-columns:28px 42px minmax(0,1fr) 30px !important; }
+.v101-queue-play {
+  width:27px;
+  height:27px;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.055);
+  color:#b9bcc8;
+  cursor:pointer;
+}
+.v101-queue-item.v101-current { border-color:color-mix(in srgb,var(--accent,#8b5cf6) 28%,rgba(255,255,255,.08)); background:color-mix(in srgb,var(--accent,#8b5cf6) 8%,rgba(255,255,255,.02)); }
+.v101-queue-item.v101-current .v101-queue-play { color:#fff; background:color-mix(in srgb,var(--accent,#8b5cf6) 24%,rgba(255,255,255,.05)); }
+
+/* API / Music Graph likes appear in the same Liked Songs view, while the
+   existing local open-stream liked list stays untouched underneath. */
+.v101-graph-liked { margin-bottom:26px; }
+.v101-liked-head { display:flex; align-items:end; justify-content:space-between; gap:14px; margin:0 0 12px; }
+.v101-liked-head h2 { margin:0; font-size:18px; }
+.v101-liked-head>span { color:#747887; font-size:10px; text-transform:uppercase; letter-spacing:.08em; }
+.v101-liked-list { display:grid; gap:6px; }
+.v101-liked-row {
+  min-height:58px;
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto 32px 32px;
+  align-items:center;
+  gap:10px;
+  padding:7px 9px;
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:13px;
+  background:rgba(255,255,255,.018);
+}
+.v101-liked-art { width:40px; height:40px; border-radius:9px; overflow:hidden; display:grid; place-items:center; background:linear-gradient(135deg,#24273a,#11121a); }
+.v101-liked-art img { width:100%; height:100%; object-fit:cover; }
+.v101-liked-row>div:nth-child(2) { min-width:0; display:flex; flex-direction:column; gap:3px; }
+.v101-liked-row strong,.v101-liked-row span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.v101-liked-row strong { font-size:12px; }
+.v101-liked-row span { color:#777b89; font-size:10px; }
+.v101-liked-row button { min-height:30px; border:1px solid rgba(255,255,255,.08); border-radius:9px; background:rgba(255,255,255,.03); color:#b9bbc5; cursor:pointer; font-size:10px; padding:0 9px; }
+.v101-liked-row button:hover { color:#fff; border-color:rgba(255,255,255,.15); }
+.v101-liked-row [data-v101-liked-remove] { color:#ff7aa7; padding:0; }
+
+/* Search shelf stays compact, with a clear path to more versions/results. */
+.v101-search-more {
+  margin-top:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.055);
+}
+.v101-search-more span { color:#707482; font-size:10px; line-height:1.45; text-align:right; }
+
+@media(max-width:900px) {
+  .v9-card-actions { flex-wrap:wrap; }
+  .v101-search-more { align-items:flex-start; flex-direction:column; }
+  .v101-search-more span { text-align:left; }
+}
+
+@media(max-width:720px) {
+  .v101-video-toggle { min-width:38px; width:38px; padding:0; }
+  .v101-video-toggle small { display:none; }
+  body.v101-video-mode-off .v91-playback-dock.open { right:10px; width:min(210px,calc(100vw - 20px)); }
+  body.v101-video-mode-off .v91-playback-dock.open .v91-video-shell { height:112px; min-height:112px; }
+  body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91,
+  body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91>div,
+  body.v101-video-mode-off .v91-playback-dock.open #youtubePlayerMountV91 iframe { min-height:112px !important; }
+  .cover-wrap .v101-add-queue-card,.v101-add-queue-radio,.v101-add-queue-row { opacity:1; }
+  .v101-liked-row { grid-template-columns:40px minmax(0,1fr) 32px 32px; }
+  .v101-liked-row [data-v101-liked-play] { grid-column:2 / -1; width:100%; }
+  .v9-album-row:has([data-v101-graph-like]) {
+    grid-template-columns:28px minmax(0,1fr) 32px 32px 32px 34px 30px 30px;
+  }
+  .v9-playlist-row:has([data-v101-graph-like]) {
+    grid-template-columns:28px minmax(0,1fr) 32px 34px 32px 30px 30px;
+  }
+  .v9-album-row:has([data-v101-graph-like]) .v91-row-full,
+  .v9-playlist-row:has([data-v101-graph-like]) .v91-row-full {
+    width:34px;
+    padding:0;
+    font-size:0;
+  }
+  .v9-album-row:has([data-v101-graph-like]) .v91-row-full::before,
+  .v9-playlist-row:has([data-v101-graph-like]) .v91-row-full::before {
+    content:'▶';
+    font-size:11px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .v101-video-toggle,.v101-add-queue,.v101-queue-play { transition:none!important; }
+}

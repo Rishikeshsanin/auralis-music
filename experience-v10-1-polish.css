@@ -1,0 +1,361 @@
+/* Auralis v10.1.1 — product polish */
+
+/* Video control sits with transport controls, immediately after Repeat. */
+#playerBar .player-controls .v1011-video-button {
+  width:auto;
+  min-width:58px;
+  height:34px;
+  padding:0 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
+  color:#858997;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  box-shadow:inset 0 1px rgba(255,255,255,.025);
+}
+#playerBar .player-controls .v1011-video-button:hover {
+  color:#fff;
+  border-color:color-mix(in srgb,var(--accent,#8b5cf6) 42%,rgba(255,255,255,.1));
+  background:color-mix(in srgb,var(--accent,#8b5cf6) 10%,rgba(255,255,255,.03));
+}
+#playerBar .player-controls .v1011-video-button.v1011-open {
+  color:#fff;
+  border-color:color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 58%,rgba(255,255,255,.12));
+  background:linear-gradient(135deg,color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 22%,rgba(255,255,255,.035)),rgba(255,255,255,.025));
+  box-shadow:0 0 24px color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 13%,transparent);
+}
+.v1011-video-glyph {
+  width:16px;
+  height:12px;
+  border:1.5px solid currentColor;
+  border-radius:4px;
+  position:relative;
+  display:inline-block;
+}
+.v1011-video-glyph i {
+  position:absolute;
+  left:5px;
+  top:3px;
+  width:0;
+  height:0;
+  border-top:2.5px solid transparent;
+  border-bottom:2.5px solid transparent;
+  border-left:4px solid currentColor;
+}
+.v1011-video-button small { font-size:9px; font-weight:850; letter-spacing:.05em; }
+
+/* Full playback no longer opens as a large popup. The official YouTube player
+   rests in a simple Auralis dock attached to the bottom player. 320x200 keeps
+   the embedded viewport at/above YouTube's documented minimum in both axes. */
+body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open,
+.v91-playback-dock.v1011-docked.open {
+  right:18px;
+  bottom:calc(var(--player-h) + 8px);
+  left:auto;
+  top:auto;
+  width:320px;
+  height:200px;
+  min-width:320px;
+  min-height:200px;
+  padding:0;
+  border-radius:18px 18px 5px 5px;
+  border:1px solid rgba(255,255,255,.1);
+  border-bottom-color:color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 22%,rgba(255,255,255,.1));
+  overflow:hidden;
+  opacity:1;
+  transform:none;
+  box-shadow:0 18px 54px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.025) inset;
+  background:#05060a;
+}
+body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open::before,
+.v91-playback-dock.v1011-docked.open::before,
+body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open .v91-dock-head,
+body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open .v91-now-playing,
+.v91-playback-dock.v1011-docked.open .v91-dock-head,
+.v91-playback-dock.v1011-docked.open .v91-now-playing {
+  display:none !important;
+}
+body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open .v91-video-shell,
+.v91-playback-dock.v1011-docked.open .v91-video-shell {
+  width:100%;
+  height:100%;
+  min-height:200px;
+  border:0;
+  border-radius:17px 17px 4px 4px;
+  box-shadow:none;
+}
+body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91,
+body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91>div,
+body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91 iframe {
+  width:100%!important;
+  height:200px!important;
+  min-width:200px!important;
+  min-height:200px!important;
+}
+
+/* Explicit expanded state: floating, draggable, resizable, with position kept
+   inside the viewport. */
+.v91-playback-dock.v1011-expanded.open {
+  width:min(480px,calc(100vw - 28px));
+  height:380px;
+  min-width:340px;
+  min-height:300px;
+  max-width:calc(100vw - 20px);
+  max-height:calc(100vh - 104px);
+  resize:both;
+  overflow:hidden;
+  border-radius:25px;
+  opacity:1;
+  transform:none;
+  box-shadow:0 36px 110px rgba(0,0,0,.58),0 0 0 1px rgba(255,255,255,.035) inset,0 0 70px color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 10%,transparent);
+}
+.v91-playback-dock.v1011-expanded .v91-dock-head {
+  cursor:grab;
+  user-select:none;
+  padding:4px 3px 10px;
+}
+.v91-playback-dock.v1011-expanded.v1011-dragging .v91-dock-head { cursor:grabbing; }
+.v91-playback-dock.v1011-expanded .v91-video-shell {
+  height:calc(100% - 98px);
+  min-height:200px;
+}
+.v91-playback-dock.v1011-expanded #youtubePlayerMountV91,
+.v91-playback-dock.v1011-expanded #youtubePlayerMountV91>div,
+.v91-playback-dock.v1011-expanded #youtubePlayerMountV91 iframe {
+  height:100%!important;
+  min-height:200px!important;
+}
+.v91-dock-head .v1011-minimize-video {
+  margin-left:auto;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);
+  color:#d7d9e1;
+  font-size:14px;
+  cursor:pointer;
+}
+.v91-dock-head .v1011-minimize-video:hover { background:rgba(255,255,255,.08); color:#fff; }
+.v91-dock-head:has(.v1011-minimize-video)>div:first-child { margin-right:auto; }
+
+/* Search card badges belong to controls, not album artwork. */
+.v9-graph-art i.v1011-preview-badge-removed { display:none!important; }
+.v9-card-actions [data-v9-preview] {
+  position:relative;
+  overflow:visible;
+}
+.v9-card-actions [data-v9-preview] > span { display:inline-flex; align-items:center; }
+.v1011-preview-hint {
+  position:absolute;
+  left:50%;
+  top:calc(100% + 6px);
+  translate:-50% -3px;
+  padding:4px 7px;
+  border-radius:7px;
+  background:rgba(12,13,19,.96);
+  border:1px solid rgba(255,255,255,.09);
+  color:#9a9eab;
+  font-size:8px;
+  line-height:1;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:.15s ease;
+  box-shadow:0 8px 24px rgba(0,0,0,.28);
+  z-index:8;
+}
+.v9-card-actions [data-v9-preview]:hover .v1011-preview-hint,
+.v9-card-actions [data-v9-preview]:focus-visible .v1011-preview-hint { opacity:1; translate:-50% 0; }
+
+/* Playlist entry points and dialog. */
+.v1011-list-icon {
+  width:22px;
+  height:22px;
+  border-radius:7px;
+  display:inline-flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:3px;
+  padding:0 5px;
+  border:1px solid color-mix(in srgb,var(--accent,#8b5cf6) 32%,rgba(255,255,255,.08));
+  background:color-mix(in srgb,var(--accent,#8b5cf6) 9%,rgba(255,255,255,.025));
+}
+.v1011-list-icon i { display:block; height:1.5px; border-radius:2px; background:currentColor; opacity:.9; }
+#newPlaylistButton[data-v1011-polished] { gap:9px; }
+#newPlaylistButton[data-v1011-polished]>span:last-child { flex:1; text-align:left; }
+.v1011-inline-list { margin-right:5px; }
+
+.v1011-playlist-dialog {
+  border:1px solid rgba(255,255,255,.1)!important;
+  background:linear-gradient(155deg,rgba(17,18,27,.98),rgba(10,11,17,.985))!important;
+  box-shadow:0 34px 100px rgba(0,0,0,.62),0 0 80px color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 8%,transparent)!important;
+}
+.v1011-playlist-dialog .v9-dialog-head>div { position:relative; padding-left:48px; }
+.v1011-playlist-mark {
+  position:absolute;
+  left:0;
+  top:50%;
+  translate:0 -50%;
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+  padding:0 9px;
+  color:#fff;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 42%,#1a1b27),#161723);
+  box-shadow:0 8px 30px color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 16%,transparent);
+}
+.v1011-playlist-mark i { height:2px; border-radius:2px; background:currentColor; }
+.v1011-playlist-dialog input,.v1011-playlist-dialog textarea {
+  border-color:rgba(255,255,255,.085)!important;
+  background:rgba(255,255,255,.025)!important;
+}
+.v1011-playlist-dialog input:focus,.v1011-playlist-dialog textarea:focus {
+  border-color:color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 56%,rgba(255,255,255,.12))!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 10%,transparent)!important;
+}
+
+/* Artist pages become playable sequences, not dead metadata screens. */
+.v1011-artist-mix {
+  margin-top:14px;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.075);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 8%,rgba(255,255,255,.02)),rgba(255,255,255,.015));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+.v1011-artist-mix>div:first-child { display:flex; align-items:center; gap:10px; min-width:0; }
+.v1011-artist-mix>div:first-child>div { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.v1011-artist-mix strong { color:#fff; font-size:12px; }
+.v1011-artist-mix small { color:#747987; font-size:9px; line-height:1.35; }
+.v1011-artist-mix>div:last-child { display:flex; gap:7px; flex-shrink:0; }
+.v1011-artist-mix button {
+  min-height:34px;
+  padding:0 11px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.09);
+  background:rgba(255,255,255,.035);
+  color:#d7d9e1;
+  font-size:9px;
+  font-weight:800;
+  cursor:pointer;
+}
+.v1011-artist-mix button:first-child {
+  color:#fff;
+  border-color:color-mix(in srgb,var(--accent,#8b5cf6) 42%,rgba(255,255,255,.1));
+  background:color-mix(in srgb,var(--accent,#8b5cf6) 13%,rgba(255,255,255,.035));
+}
+
+/* Artwork: use the real poster whenever any provider/canonical match has one;
+   otherwise use an Aura-aware Auralis poster rather than an empty block. */
+.v1011-art-fallback-active { position:relative; overflow:hidden; }
+.v1011-branded-art {
+  position:absolute;
+  inset:0;
+  z-index:0;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 28% 20%,color-mix(in srgb,var(--aura-primary,var(--accent,#8b5cf6)) 42%,transparent),transparent 43%),
+    radial-gradient(circle at 78% 78%,color-mix(in srgb,var(--aura-secondary,#d46cff) 24%,transparent),transparent 48%),
+    linear-gradient(145deg,#202236,#0b0c12 72%);
+  color:#fff;
+}
+.v1011-branded-art::before,.v1011-branded-art::after {
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.08);
+  width:74%;
+  aspect-ratio:1;
+}
+.v1011-branded-art::after { width:46%; opacity:.7; }
+.v1011-branded-art i {
+  position:absolute;
+  top:10%;
+  left:11%;
+  font-style:normal;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.16em;
+  color:rgba(255,255,255,.62);
+}
+.v1011-branded-art b {
+  position:relative;
+  z-index:1;
+  font-size:clamp(18px,4vw,42px);
+  line-height:1;
+  text-shadow:0 8px 30px rgba(0,0,0,.38);
+}
+.v1011-branded-art small {
+  position:absolute;
+  bottom:9%;
+  left:0;
+  right:0;
+  text-align:center;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.2em;
+  color:rgba(255,255,255,.46);
+}
+.v1011-art-fallback-active>.cover-fallback,
+.v1011-art-fallback-active>.auralis-art-fallback-v92,
+.v1011-art-fallback-active>span:not(.provider-badge):not(.v1011-branded-art) { opacity:0; }
+.v1011-art-fallback-active>button,.v1011-art-fallback-active>.provider-badge,.v1011-art-fallback-active>i { position:relative; z-index:2; }
+.v1011-art-fallback-active>img { position:relative; z-index:1; }
+
+@media(max-width:900px) {
+  .v1011-artist-mix { align-items:flex-start; flex-direction:column; }
+  .v1011-artist-mix>div:last-child { width:100%; }
+  .v1011-artist-mix button { flex:1; }
+}
+
+@media(max-width:760px) {
+  #playerBar .player-controls .v1011-video-button { min-width:34px; width:34px; padding:0; }
+  #playerBar .player-controls .v1011-video-button small { display:none; }
+  body.v1011-video-ready:not(.v1011-video-expanded) .v91-playback-dock.open,
+  .v91-playback-dock.v1011-docked.open {
+    right:10px;
+    bottom:calc(var(--player-h) + 70px);
+    width:220px;
+    height:200px;
+    min-width:220px;
+    min-height:200px;
+    border-radius:16px;
+  }
+  body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91,
+  body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91>div,
+  body.v1011-video-ready:not(.v1011-video-expanded) #youtubePlayerMountV91 iframe {
+    width:220px!important;
+    height:200px!important;
+    min-width:200px!important;
+    min-height:200px!important;
+  }
+  .v91-playback-dock.v1011-expanded.open {
+    left:10px!important;
+    right:10px!important;
+    top:auto!important;
+    bottom:calc(var(--player-h) + 70px)!important;
+    width:calc(100vw - 20px)!important;
+    height:min(380px,calc(100vh - 170px))!important;
+    min-width:0;
+    min-height:300px;
+    resize:none;
+  }
+  .v91-playback-dock.v1011-expanded .v91-dock-head { cursor:default; }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .v1011-preview-hint,#playerBar .player-controls .v1011-video-button { transition:none!important; }
+}

@@ -89,9 +89,13 @@
 import('./update-manager-v10.js')
   .catch(error => console.warn('Auralis Stability Update Manager did not start', error));
 
-// Progressive release chain: v7/v8 → Music Graph v9 → Full Playback v9.1 → UX v9.2 → Playback Recovery v9.2.1.
+// Progressive release chain: v7/v8 → Music Graph v9 → Full Playback v9.1 → UX v9.2
+// → Playback Recovery v9.2.1 → Player + Universe v10.1 → product polish → v10.1.2 refinement.
 import('./music-graph-v9.js')
   .then(() => import('./full-playback-v9-1.js'))
   .then(() => import('./ux-reliability-v9-2.js'))
   .then(() => import('./playback-recovery-v9-2-1.js'))
-  .catch(error => console.warn('Auralis Music Graph / Full Playback / UX Reliability / Playback Recovery did not start', error));
+  .then(() => import('./player-universe-v10-1.js'))
+  .then(() => import('./product-polish-v10-1.js'))
+  .then(() => import('./product-hotfix-v10-1-2.js'))
+  .catch(error => console.warn('Auralis progressive product layer did not start', error));
