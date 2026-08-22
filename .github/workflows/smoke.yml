@@ -36,6 +36,7 @@ jobs:
           node --check js/music-graph-v9.js
           node --check js/full-playback-v9-1.js
           node --check js/ux-reliability-v9-2.js
+          node --check js/playback-recovery-v9-2-1.js
           node --check js/app-v2.js
           node --check js/collections.js
           node --check js/library-map.js
@@ -56,3 +57,4 @@ jobs:
           python tests/music_graph_v9.py
           python tests/full_playback_v91.py
           python tests/ux_v92.py
+          python tests/playback_recovery_v921.py
