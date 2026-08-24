@@ -12,8 +12,8 @@ function artworkCandidates(track) {
   if (!art) return [];
   const mirrors = Array.isArray(art.mirrors) ? art.mirrors : [];
   // Cards render around 200–300 px, so prefer Audius's direct 480 px cover first.
-  // Keep every other size/mirror as an immediate fallback instead of throwing the
-  // card into the slower canonical-artwork recovery path after one failed URL.
+  // Keep every other size/mirror as an immediate fallback candidate on the
+  // normalized track instead of making a single generic mirror the primary URL.
   const candidates = [
     art['480x480'],
     art._480x480,
