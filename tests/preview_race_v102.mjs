@@ -82,7 +82,7 @@ assert.equal(startHarness.restoreCount, 1);
 assert.deepEqual(startHarness.restored, { ...interruptedFull, playing: false, paused: true });
 assert.equal(startHarness.ownership.session, null);
 
-// Starting a direct/radio/full owner while refresh is pending invalidates the request.
+// Starting a full owner while refresh is pending invalidates the request without restoring.
 const cancelHarness = createHarness();
 const interruptedDirect = { kind: 'direct', title: 'Original direct song', playing: true, paused: false, currentTime: 12 };
 interruptedDirect.playing = false;
@@ -96,15 +96,33 @@ const cancelledStart = (async () => {
   return cancelHarness.graph.started(cancelledRequestId, { item: refreshedItem, playing: true });
 })();
 
-assert.ok(cancelHarness.ownership.supersede('direct-playback'));
-const replacementDirect = { kind: 'direct', title: 'Replacement direct song', playing: true, paused: false };
+assert.ok(cancelHarness.ownership.supersede('full-playback'));
+const replacementFull = { kind: 'full', title: 'Replacement full song', playing: true, paused: false };
 cancelledRefresh.resolve({ previewUrl: 'https://preview.example/must-not-play.mp3' });
 assert.equal(await cancelledStart, false, 'stale refreshed preview must never start');
 assert.equal(cancelHarness.previewAudible, false);
 assert.equal(cancelHarness.restoreCount, 0, 'superseding playback must not restore the interrupted source');
 assert.equal(cancelHarness.ownership.session, null);
+assert.equal(replacementFull.playing, true);
+assert.ok(cancelHarness.events.some(event => event.phase === 'cancelled' && event.reason === 'full-playback'));
+
+// Direct/radio takeover restores the interrupted core URL paused before its click handler runs.
+const directHarness = createHarness();
+directHarness.ownership.begin({ owner: 'core', interrupted: interruptedDirect });
+const directRefresh = deferred();
+const directRequestId = directHarness.graph.request({ item: { previewUrl: expiringUrl } });
+const directStart = (async () => {
+  const refreshedItem = await directRefresh.promise;
+  if (!directHarness.graph.isCurrent(directRequestId)) return false;
+  return directHarness.graph.started(directRequestId, { item: refreshedItem, playing: true });
+})();
+assert.ok(directHarness.ownership.finish(null, { restore: true, reason: 'direct-playback', emitCancelled: true }));
+const replacementDirect = { kind: 'direct', title: 'Replacement direct song', playing: true, paused: false };
+directRefresh.resolve({ previewUrl: 'https://preview.example/must-not-play-direct.mp3' });
+assert.equal(await directStart, false);
+assert.equal(directHarness.restoreCount, 1);
+assert.equal(directHarness.restored.paused, true);
 assert.equal(replacementDirect.playing, true);
-assert.ok(cancelHarness.events.some(event => event.phase === 'cancelled' && event.reason === 'direct-playback'));
 
 // Rapid Preview clicks transfer the same interrupted session to the newest token.
 const rapidHarness = createHarness();

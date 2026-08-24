@@ -245,7 +245,7 @@ import { PreviewOwnershipLifecycle } from './preview-lifecycle-v10-2.mjs';
 
   function claimDirectPlayback() {
     stopLegacyLookup();
-    if (ownership.session) ownership.supersede('direct-playback');
+    if (ownership.session) finishPreview({ restore: true, reason: 'direct-playback', emitCancelled: true });
     const full = fullApi();
     if (full?.state?.player || full?.state?.track) {
       try { full.stop?.(); } catch {}
