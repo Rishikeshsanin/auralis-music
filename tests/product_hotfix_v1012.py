@@ -8,7 +8,7 @@ full = (root / 'js' / 'full-playback-v9-1.js').read_text()
 
 assert "import('./product-hotfix-v10-1-2.js')" in boot, 'final v10.1 video/artwork refinement must boot'
 assert boot.index("import('./product-polish-v10-1.js')") < boot.index("import('./product-hotfix-v10-1-2.js')"), 'hotfix must run after product polish'
-assert "const VERSION = '10.1.5'" in js, 'performance/artwork hotfix version missing'
+assert "const VERSION = '10.1.6'" in js, 'artwork-loading hotfix version missing'
 
 # Full playback must not enlarge the Auralis bottom player.
 assert 'moveShellToInline' not in js, 'YouTube video must no longer be reparented into the bottom player'
@@ -38,12 +38,15 @@ assert 'artist:\\"' in js and 'track:\\"' in js, 'exact artist/track lookup miss
 assert 'v1012-cover' in js and 'v1012-wave' in js and '--v1012-hue' in css, 'refined unique Auralis cover missing'
 assert 'font-size:9px' in css, 'fallback monogram must stay subtle rather than giant'
 
-# Keep the release non-destructive and make observer work event-driven/idle.
-assert 'scanQueued' in js and 'requestIdleCallback' in js, 'artwork recovery must be coalesced into idle work'
+# Visible artwork must load immediately while hidden/off-screen recovery remains idle/event-driven.
+assert 'artworkHostIsVisible' in js, 'visible artwork detection missing'
+assert 'prioritizeVisibleArtwork' in js and "img.loading = 'eager'" in js, 'visible posters must be promoted from lazy to eager loading'
+assert "img.fetchPriority = 'high'" in js, 'visible posters should receive high fetch priority'
+assert 'scanVisibleFallbacks' in js and 'prioritizeNewArtwork' in js, 'visible fallback recovery must run immediately for newly rendered cards'
+assert 'requestIdleCallback' in js, 'off-screen artwork recovery must still prefer idle time'
 assert "setInterval(syncVideoPopup, 350)" not in js, 'permanent 350ms video polling must stay removed'
-assert 'addedNodeNeedsArtworkScan' in js, 'body observer must filter irrelevant mutations'
 assert 'videoObserver.observe(dock' in js, 'video state must use the focused playback dock observer'
 assert 'localStorage.clear(' not in js and 'indexedDB.deleteDatabase(' not in js, 'hotfix must not wipe user data'
 assert "import('./update-manager-v10.js')" in boot, 'Stability v10 must remain active'
 
-print('Auralis v10.1.5 artwork-stability/performance tests passed')
+print('Auralis v10.1.6 artwork-loading/stability tests passed')
