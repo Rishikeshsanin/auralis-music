@@ -85,22 +85,30 @@ class CatalogManager {
     return interleave(groups, limit);
   }
 
+  async fillCollectionPage(primaryTracks, collection, { limit = 48, offset = 0 } = {}) {
+    const primary = dedupeTracks(primaryTracks || []);
+    if (primary.length >= limit) return primary.slice(0, limit);
+
+    // Some provider-specific discovery endpoints intentionally return only a
+    // small curated batch (Fresh Drops can be just a handful of songs). Keep
+    // those real items first, then fill the rest of the page from the same
+    // collection query across Auralis's live song providers. Demo tracks remain
+    // a true last-resort handled by the UI only when the live network is empty.
+    const liveFallback = await this.searchTracks(collection.query, { limit, offset });
+    return dedupeTracks([...primary, ...liveFallback]).slice(0, limit);
+  }
+
   async collection(collection, { limit = 48, offset = 0 } = {}) {
     if (!collection) return [];
 
     if (collection.source === 'audius' && typeof audiusProvider[collection.loader] === 'function') {
       const tracks = await this.settle(audiusProvider, () => audiusProvider[collection.loader](limit, offset));
-      if (tracks.length) return dedupeTracks(tracks);
-      // Endpoint-specific discovery feeds can be temporarily empty/unavailable.
-      // Keep the collection live by falling back to the same collection query
-      // across the active song providers instead of dropping into Demo tracks.
-      return this.searchTracks(collection.query, { limit, offset });
+      return this.fillCollectionPage(tracks, collection, { limit, offset });
     }
 
     if (collection.source === 'jamendo') {
       const tracks = await this.settle(jamendoProvider, () => jamendoProvider.featured(collection.tag || collection.query, limit, offset));
-      if (tracks.length) return dedupeTracks(tracks);
-      return this.searchTracks(collection.query, { limit, offset });
+      return this.fillCollectionPage(tracks, collection, { limit, offset });
     }
 
     return this.searchTracks(collection.query, { limit, offset });
