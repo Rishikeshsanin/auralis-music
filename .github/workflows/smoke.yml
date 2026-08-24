@@ -22,7 +22,7 @@ jobs:
           python-version: '3.12'
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -68,5 +68,5 @@ jobs:
           python tests/product_polish_v1011.py
           python tests/product_hotfix_v1012.py
           python tests/performance_v1015.py
-          python tests/home_fast_path_v102.py
+          python tests/artwork_delivery_v102.py
           node tests/sw_lifecycle_v10.mjs
