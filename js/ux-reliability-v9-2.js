@@ -4,7 +4,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ART_HOST_SELECTOR = '.cover-wrap,.row-cover,.queue-item-cover,.player-cover,.radio-logo,.v5-radio-logo,.v91-now-art';
   const ART_OWNER_SELECTOR = '.music-card,.track-row,.queue-item,.player,.v91-playback-dock';
-  const ART_SIZES = ['1000x1000', '480x480', '150x150'];
+  const ART_SIZES = ['480x480', '1000x1000', '150x150'];
   const canonicalArtworkCache = new Map();
   let maintenanceQueued = false;
 
@@ -136,6 +136,13 @@
     const host = img.closest(ART_HOST_SELECTOR);
     host?.classList.remove('image-failed', 'auralis-art-failed-v92');
     host?.querySelector(':scope > .auralis-art-fallback-v92')?.remove();
+    if (host && img.dataset.auralisRecoveryLoadBound !== 'true') {
+      img.dataset.auralisRecoveryLoadBound = 'true';
+      img.addEventListener('load', () => {
+        host.querySelectorAll(':scope > .cover-fallback,:scope > .auralis-art-fallback-v92,:scope > .v1011-branded-art').forEach(node => node.remove());
+        host.classList.remove('image-failed', 'no-art', 'auralis-art-failed-v92', 'v1011-art-fallback-active');
+      }, { once: true });
+    }
   }
 
   function isAudiusArtwork(img, src = '') {
@@ -147,6 +154,21 @@
     if (!(img instanceof HTMLImageElement)) return false;
     const src = clean(img.currentSrc || img.src || '');
     if (!src || !isAudiusArtwork(img, src)) return false;
+
+    let configured = [];
+    try {
+      configured = JSON.parse(img.dataset.auralisArtworkCandidates || '[]');
+    } catch {}
+    const triedUrls = new Set((img.dataset.auralisArtworkUrls || '').split('\n').filter(Boolean));
+    triedUrls.add(src);
+    const configuredNext = configured.find(url => /^https?:\/\//i.test(url) && !triedUrls.has(url));
+    if (configuredNext) {
+      triedUrls.add(configuredNext);
+      img.dataset.auralisArtworkUrls = [...triedUrls].join('\n');
+      prepareImageRetry(img);
+      img.src = configuredNext;
+      return true;
+    }
 
     const match = src.match(/(1000x1000|480x480|150x150)/i);
     if (!match) return false;
@@ -276,10 +298,10 @@
     const observer = new MutationObserver(queueMaintenance);
     observer.observe(document.body, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class']
+      subtree: true
     });
+    window.addEventListener('auralis:view-change', queueMaintenance);
+    window.addEventListener('auralis:full-playback-state', queueMaintenance);
 
     window.AuralisUXV92 = {
       version: VERSION,

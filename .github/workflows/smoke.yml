@@ -71,4 +71,5 @@ jobs:
           python tests/performance_v1015.py
           python tests/artwork_delivery_v102.py
           python tests/playback_collection_v102.py
+          python tests/stabilization_v102.py
           node tests/sw_lifecycle_v10.mjs

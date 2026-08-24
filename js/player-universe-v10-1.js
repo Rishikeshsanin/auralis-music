@@ -167,6 +167,8 @@
   }
 
   function directItemFromNode(node) {
+    const coreTrack = window.AuralisCorePlayerV102?.trackForNode?.(node);
+    if (coreTrack?.title) return { ...coreTrack, playbackMode: 'direct' };
     const card = node.closest('.music-card');
     if (card) {
       const target = $('[data-play-index]', card);
@@ -244,20 +246,6 @@
     queueState.rendering = false;
   }
 
-  function portableQueue() {
-    return queueState.items.map(item => ({
-      id: item.id,
-      graphId: item.graphId,
-      title: item.title,
-      artist: item.artist,
-      album: item.album || '',
-      artwork: item.artwork || '',
-      provider: item.provider || 'Auralis',
-      playbackMode: item.playbackMode || 'direct',
-      isLive: Boolean(item.isLive)
-    }));
-  }
-
   async function waitForFullPlayback(timeout = 3500) {
     const started = Date.now();
     while (!window.AuralisFullPlaybackV91?.play && Date.now() - started < timeout) {
@@ -279,13 +267,18 @@
         toast('Full playback is still loading', 'Try again in a moment.');
         return;
       }
-      full.state.queue = portableQueue();
-      full.state.index = index;
+      full.state.queue = [normalizeGraphTrack(item)];
+      full.state.index = 0;
       full.play(normalizeGraphTrack(item));
       return;
     }
 
     window.AuralisFullPlaybackV91?.stop?.();
+    const core = window.AuralisCorePlayerV102;
+    if (core?.play && item.streamUrl) {
+      core.play(item);
+      return;
+    }
     if (item.playTarget?.click) {
       item.playTarget.click();
       return;
@@ -643,16 +636,6 @@
     }
   }
 
-  function syncFullQueueIndex() {
-    const full = window.AuralisFullPlaybackV91?.state;
-    if (!queueState.activePlayback || !full?.active || !queueState.items.length) return;
-    const index = Number(full.index);
-    if (Number.isInteger(index) && index >= 0 && index < queueState.items.length && index !== queueState.currentIndex) {
-      queueState.currentIndex = index;
-      renderUnifiedQueue();
-    }
-  }
-
   function start() {
     loadCss();
     ensureVideoToggle();
@@ -660,20 +643,38 @@
     scan();
 
     const observer = new MutationObserver(scheduleScan);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener('click', captureControls, true);
-
-    setInterval(() => {
+    window.addEventListener('auralis:player-context', () => {
       syncVideoMode();
       syncPlayerGraphLike();
-      syncFullQueueIndex();
-    }, 500);
+    });
+    window.addEventListener('auralis:full-playback-state', () => {
+      syncVideoMode();
+      syncPlayerGraphLike();
+    });
+    window.addEventListener('auralis:core-ended', event => {
+      if (!queueState.activePlayback || !queueState.items.length) return;
+      event.preventDefault();
+      playRelative(1);
+    });
+    window.addEventListener('auralis:full-ended', event => {
+      if (!queueState.activePlayback || !queueState.items.length) return;
+      event.preventDefault();
+      playRelative(1);
+    });
+    window.addEventListener('auralis:full-queue-navigation', event => {
+      if (!queueState.activePlayback || !queueState.items.length) return;
+      event.preventDefault();
+      playRelative(Number(event.detail?.delta || 1));
+    });
 
     window.AuralisPlayerUniverseV101 = {
       version: VERSION,
       queue: queueState,
       addToQueue: enqueue,
       playQueueIndex,
+      playRelative,
       toggleGraphLike,
       getGraphLikes,
       get videoMode() { return videoMode; },

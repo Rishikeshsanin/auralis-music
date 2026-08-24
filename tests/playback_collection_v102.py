@@ -10,7 +10,8 @@ full = (root / 'js' / 'full-playback-v9-1.js').read_text()
 
 # Partial provider collections must remain real and gain enough live results for pagination.
 assert 'async fillCollectionPage' in manager, 'partial collection filler missing'
-assert 'dedupeTracks([...primary, ...liveFallback]).slice(0, limit)' in manager, 'real collection items must be preserved before live fallback items'
+assert 'dedupeTracks([...primary, ...specializedFallback, ...liveFallback]).slice(0, limit)' in manager, 'real collection items must be preserved before specialized/live fallback items'
+assert 'collection.fallbackLoader' in manager, 'sparse specialized collections need a relevant live provider fallback'
 assert "return this.fillCollectionPage(tracks, collection, { limit, offset });" in manager, 'source-specific collections must use live page filling'
 assert 'fallbackTracks' not in manager, 'catalog manager must never substitute Demo tracks into a live collection'
 assert 'state.discoverHasMore = tracks.length >= 16' in app, 'Discover load-more contract changed unexpectedly'
@@ -48,12 +49,12 @@ assert "full.stop?.()" in coordinator, 'direct playback must stop any prior full
 # Bottom player artwork must follow preview/full ownership.
 assert 'previewArtworkFromTrigger' in coordinator and "$('#playerCover')" in coordinator
 assert 'track.artwork || video.artwork' in coordinator, 'full song artwork must restore into the bottom player'
-assert 'nodes.cover.innerHTML = item.artwork' in graph, 'Music Graph preview must continue updating player artwork'
+assert 'nodes.cover.dataset.artworkKey' in graph and 'item.artwork' in graph, 'Music Graph preview must keep stable, source-correct player artwork'
 assert 'const artwork = track.artwork || video.artwork' in full, 'Full Playback must continue updating player artwork'
 
 # Existing playback implementations remain present; this is coordination, not replacement.
 assert 'function loadTrack(track, autoplay = false)' in app
-assert 'function startPreview(queue, index = 0)' in graph
+assert 'async function startPreview(queue, index = 0' in graph
 assert 'async function playFullTrack(track, queue = null, index = null)' in full
 
 print('Auralis v10.2 collection pagination + playback ownership regression tests passed')

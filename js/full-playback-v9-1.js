@@ -133,6 +133,12 @@
     };
   }
 
+  function emitFullState(reason) {
+    window.dispatchEvent(new CustomEvent('auralis:full-playback-state', {
+      detail: { reason, active: state.active, track: state.track, video: state.video, index: state.index }
+    }));
+  }
+
   function updateAuralisPlayer(track, video) {
     const nodes = playerNodes();
     nodes.audio?.pause();
@@ -226,7 +232,8 @@
       const volume = Number(nodes.volume?.value ?? 0.8);
       try { state.player.setVolume(Math.round(volume * 100)); } catch {}
     }
-    if (ended) nextFullTrack(1);
+    if (playing || paused) emitFullState(playing ? 'playing' : 'paused');
+    if (ended && window.dispatchEvent(new CustomEvent('auralis:full-ended', { cancelable: true, detail: { track: state.track } }))) nextFullTrack(1);
   }
 
   async function mountVideo(track, video) {
@@ -277,12 +284,14 @@
       state.active = true;
       state.track = track;
       state.video = video;
+      emitFullState('resolved');
       await mountVideo(track, video);
       toast(video.fromCache ? 'Full source restored' : 'Full source resolved', `${track.title} · ${video.channel}`);
     } catch (error) {
       state.active = false;
       setLoader(error.message || 'Full playback unavailable', true);
       toast('Could not resolve full playback', error.message || 'Try another result.');
+      emitFullState('failed');
     } finally {
       state.resolving = false;
     }
@@ -298,6 +307,7 @@
     $('#playerBar')?.classList.remove('v91-youtube-active');
     if ($('#playButton')) $('#playButton').textContent = '▶';
     setDockOpen(false);
+    emitFullState('stopped');
   }
 
   function nextFullTrack(delta = 1) {
@@ -428,10 +438,14 @@
       return;
     }
     if (target.closest('#nextButton')) {
-      event.preventDefault(); event.stopImmediatePropagation(); nextFullTrack(1); return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (window.dispatchEvent(new CustomEvent('auralis:full-queue-navigation', { cancelable: true, detail: { delta: 1 } }))) nextFullTrack(1);
+      return;
     }
     if (target.closest('#prevButton')) {
-      event.preventDefault(); event.stopImmediatePropagation(); nextFullTrack(-1); return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (window.dispatchEvent(new CustomEvent('auralis:full-queue-navigation', { cancelable: true, detail: { delta: -1 } }))) nextFullTrack(-1);
+      return;
     }
 
     if (target.closest('[data-play-index],[data-play-row],[data-radio-play],.music-card,.track-row,.radio-card') && !target.closest('.v9-graph-card,.v9-modal')) {
@@ -459,7 +473,7 @@
     ensureDock();
     scanFullPlayActions();
     const observer = new MutationObserver(() => requestAnimationFrame(scanFullPlayActions));
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe($('#contentScroll') || document.body, { childList: true, subtree: true });
     window.addEventListener('click', capturePlayerControls, true);
     window.addEventListener('input', captureRanges, true);
     window.AuralisFullPlaybackV91 = {

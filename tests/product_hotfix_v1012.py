@@ -5,6 +5,7 @@ js = (root / 'js' / 'product-hotfix-v10-1-2.js').read_text()
 css = (root / 'experience-v10-1-hotfix.css').read_text()
 boot = (root / 'js' / 'konkani-radio-v7.js').read_text()
 full = (root / 'js' / 'full-playback-v9-1.js').read_text()
+app = (root / 'js' / 'app-v3.js').read_text()
 
 assert "import('./product-hotfix-v10-1-2.js')" in boot, 'final v10.1 video/artwork refinement must boot'
 assert boot.index("import('./product-polish-v10-1.js')") < boot.index("import('./product-hotfix-v10-1-2.js')"), 'hotfix must run after product polish'
@@ -24,11 +25,13 @@ assert 'v1013-video-hidden' in js and 'visibility:hidden!important' in css, 'hid
 assert "target.closest('#videoModeToggleV101')" in js and 'showVideo()' in js, 'Video control must restore/toggle the hidden window'
 assert 'YT.Player' in full, 'official YouTube iframe player must remain unchanged'
 
-# Play/pause must not rebuild the Trending grid and force every poster to reload.
-assert 'installTrendingGridGuard' in js, 'Trending artwork stability guard missing'
-assert "Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML')" in js, 'guard must preserve the existing Trending DOM during state-only renders'
-assert 'markTrendingPreserveWindow' in js and "event.target?.id === 'audio'" in js, 'audio play/pause must mark the preservation window'
-assert 'syncTrendingState' in js and 'cardSignature' in js, 'guard must update active/play state without replacing card artwork nodes'
+# Play/pause must update state at the owning core layer, without monkey-patching
+# Element.innerHTML or rebuilding poster DOM.
+assert 'syncPlaybackIndicators' in app, 'core playback-state updater missing'
+play_handler = app[app.index("els.audio.addEventListener('play'"):app.index("els.audio.addEventListener('playing'")]
+pause_handler = app[app.index("els.audio.addEventListener('pause'"):app.index("els.audio.addEventListener('timeupdate'")]
+assert 'renderCards()' not in play_handler and 'renderCards()' not in pause_handler, 'play/pause must not rebuild Trending'
+assert "Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML')" not in js, 'DOM setter monkey patch must stay removed'
 
 # Poster recovery should prefer real Audius artwork, then canonical catalog art.
 assert 'queryAudiusArtwork' in js and 'audiusCandidates' in js, 'Audius artwork retry path missing'
@@ -39,7 +42,7 @@ assert 'artist:\\"' in js and 'track:\\"' in js, 'exact artist/track lookup miss
 # If every legitimate source fails, fallback must stay neutral and must not mimic album art.
 assert 'v1012-cover' in js, 'final fallback state hook missing'
 assert '.v1011-branded-art.v1012-cover::before' in css and '.v1011-branded-art.v1012-cover::after' in css
-assert '.v1012-wave' in css and 'display:none!important' in css, 'synthetic waveform fallback must remain hidden'
+assert '.v1012-wave' in css and 'display:none!important' in css, 'legacy synthetic waveform styling must remain hidden'
 assert 'place-items:center!important' in css, 'neutral fallback initial must remain centered'
 
 # Visible artwork must load immediately while hidden/off-screen recovery remains idle/event-driven.

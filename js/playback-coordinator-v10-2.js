@@ -30,7 +30,6 @@
 
   const state = {
     preview: null,
-    syntheticDepth: 0,
     fullHooked: false,
     hookFrames: 0
   };
@@ -71,6 +70,7 @@
       artistHtml: $('#playerArtist')?.textContent || 'Auralis',
       sourceHtml: $('#playerSource')?.textContent || 'Multi-source player',
       coverHtml: $('#playerCover')?.innerHTML || '<span>A</span>',
+      coverKey: $('#playerCover')?.dataset.artworkKey || '',
       likeHtml: $('#playerLike')?.innerHTML || '♡',
       likeClass: $('#playerLike')?.className || 'like-button',
       progressValue: $('#progressBar')?.value || '0',
@@ -87,7 +87,10 @@
     if ($('#playerTitle')) $('#playerTitle').textContent = snapshot.titleHtml;
     if ($('#playerArtist')) $('#playerArtist').textContent = snapshot.artistHtml;
     if ($('#playerSource')) $('#playerSource').textContent = snapshot.sourceHtml;
-    if ($('#playerCover')) $('#playerCover').innerHTML = snapshot.coverHtml;
+    if ($('#playerCover') && ($('#playerCover').dataset.artworkKey !== snapshot.coverKey || $('#playerCover').innerHTML !== snapshot.coverHtml)) {
+      $('#playerCover').innerHTML = snapshot.coverHtml;
+      $('#playerCover').dataset.artworkKey = snapshot.coverKey;
+    }
     if ($('#playerLike')) {
       $('#playerLike').innerHTML = snapshot.likeHtml;
       $('#playerLike').className = snapshot.likeClass;
@@ -149,17 +152,21 @@
     const artwork = track.artwork || video.artwork || '';
     const cover = $('#playerCover');
     if (cover) {
-      cover.innerHTML = '';
-      if (artwork) {
-        const img = document.createElement('img');
-        img.src = artwork;
-        img.alt = `${track.title || video.title || 'Track'} artwork`;
-        img.referrerPolicy = 'no-referrer';
-        cover.append(img);
-      } else {
-        const span = document.createElement('span');
-        span.textContent = (track.title || 'A')[0];
-        cover.append(span);
+      const artworkKey = `youtube::${track.graphId || track.id || track.title}::${artwork}`;
+      if (cover.dataset.artworkKey !== artworkKey) {
+        cover.dataset.artworkKey = artworkKey;
+        cover.innerHTML = '';
+        if (artwork) {
+          const img = document.createElement('img');
+          img.src = artwork;
+          img.alt = `${track.title || video.title || 'Track'} artwork`;
+          img.referrerPolicy = 'no-referrer';
+          cover.append(img);
+        } else {
+          const span = document.createElement('span');
+          span.textContent = (track.title || 'A')[0];
+          cover.append(span);
+        }
       }
     }
 
@@ -199,24 +206,7 @@
   }
 
   function deactivateInternalPreview() {
-    if (!state.preview) return;
-    const sentinel = document.createElement('button');
-    sentinel.type = 'button';
-    sentinel.className = 'track-row';
-    sentinel.dataset.v102PlaybackSentinel = 'true';
-    sentinel.hidden = true;
-    sentinel.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }, true);
-    document.body.append(sentinel);
-    state.syntheticDepth += 1;
-    try {
-      sentinel.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-    } finally {
-      state.syntheticDepth -= 1;
-      sentinel.remove();
-    }
+    window.AuralisMusicGraphV9?.deactivatePreview?.();
   }
 
   function finishPreview({ restore = true } = {}) {
@@ -300,7 +290,7 @@
   }
 
   function handleClick(event) {
-    if (state.syntheticDepth || !(event.target instanceof Element)) return;
+    if (!(event.target instanceof Element)) return;
     const target = event.target;
 
     const previewTrigger = target.closest(PREVIEW_TRIGGER);

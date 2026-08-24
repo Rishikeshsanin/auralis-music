@@ -94,8 +94,15 @@ class CatalogManager {
     // those real items first, then fill the rest of the page from the same
     // collection query across Auralis's live song providers. Demo tracks remain
     // a true last-resort handled by the UI only when the live network is empty.
-    const liveFallback = await this.searchTracks(collection.query, { limit, offset });
-    return dedupeTracks([...primary, ...liveFallback]).slice(0, limit);
+    const needed = Math.max(1, limit - primary.length);
+    const specializedFallback = collection.source === 'audius' && collection.fallbackLoader
+      ? await this.settle(audiusProvider, () => collection.fallbackLoader === 'trending'
+        ? audiusProvider.trending(Math.max(needed, 12), 'week', offset)
+        : audiusProvider[collection.fallbackLoader](Math.max(needed, 12), offset))
+      : [];
+    const remaining = Math.max(1, limit - dedupeTracks([...primary, ...specializedFallback]).length);
+    const liveFallback = await this.searchTracks(collection.query, { limit: Math.max(remaining, 12), offset });
+    return dedupeTracks([...primary, ...specializedFallback, ...liveFallback]).slice(0, limit);
   }
 
   async collection(collection, { limit = 48, offset = 0 } = {}) {

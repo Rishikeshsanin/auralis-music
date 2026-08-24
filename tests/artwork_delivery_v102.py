@@ -20,8 +20,10 @@ assert 'audiusProvider.trending' in manager and 'jamendoProvider.popular' in man
 # fallbacks on the normalized track object. This normalized artwork is shared
 # by Home, Discover, Collections, Genres/Moods, Queue, Liked/Recent and Player.
 first_480 = audius.index("art['480x480']")
-first_mirror_spread = audius.index('...mirrors')
-assert first_480 >= 0 and first_mirror_spread >= 0 and first_480 < first_mirror_spread, '480px artwork must be preferred before generic mirrors'
+primary_push = audius.index('candidates.push(source)')
+mirror_spread = audius.index('mirrors.forEach(mirror =>')
+assert first_480 >= 0 and primary_push >= 0 and mirror_spread > primary_push, '480px artwork must be preferred before mirror variants'
+assert 'new URL(path, mirror).href' in audius, 'Audius mirror hosts must be expanded into usable image URLs'
 assert 'art._480x480' in audius, 'modern Audius 480px artwork key must remain supported'
 assert "art['1000x1000']" in audius and "art['150x150']" in audius, 'Audius size fallbacks were removed'
 assert 'artwork: artworkOf(track)' in audius and 'artworkCandidates: artworkCandidates(track)' in audius, 'normalized tracks must retain primary + fallback artwork URLs'
@@ -33,9 +35,10 @@ assert 'artwork: artworkOf(track)' in audius and 'artworkCandidates: artworkCand
 # tracks while also preventing the offline Auralis Demo feed from replacing it.
 assert 'async fillCollectionPage' in manager, 'partial live collection filler missing'
 primary_pos = manager.index('const primary = dedupeTracks(primaryTracks || []);')
-search_pos = manager.index('const liveFallback = await this.searchTracks(collection.query, { limit, offset });')
-merge_pos = manager.index('dedupeTracks([...primary, ...liveFallback]).slice(0, limit)')
-assert 0 <= primary_pos < search_pos < merge_pos, 'source-specific items must remain first before live fallback filling'
+specialized_pos = manager.index('const specializedFallback =')
+search_pos = manager.index('const liveFallback = await this.searchTracks(collection.query,')
+merge_pos = manager.index('dedupeTracks([...primary, ...specializedFallback, ...liveFallback]).slice(0, limit)')
+assert 0 <= primary_pos < specialized_pos < search_pos < merge_pos, 'source-specific items must remain first before relevant live fallback filling'
 assert 'if (primary.length >= limit) return primary.slice(0, limit);' in manager, 'already-full provider collection pages should not make unnecessary fallback searches'
 assert manager.count('return this.fillCollectionPage(tracks, collection, { limit, offset });') >= 2, 'Audius and Jamendo collections must both use partial-page filling'
 assert 'fallbackTracks' not in manager, 'catalog manager must not insert Demo tracks into live collections'
@@ -46,7 +49,8 @@ assert "els.discoverMore.textContent = 'Load more tracks'" in app, 'Load more tr
 assert "const VERSION = '10.1.6'" in hotfix, 'v10.1.6 artwork stability layer must remain active'
 assert 'prioritizeVisibleArtwork' in hotfix, 'visible artwork priority must remain active'
 assert 'scanVisibleFallbacks' in hotfix, 'canonical artwork safety net must remain active'
-assert 'installTrendingGridGuard' in hotfix, 'play/pause poster DOM guard must remain active'
+assert 'syncPlaybackIndicators' in app, 'core play/pause poster stability must remain active'
+assert "Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML')" not in hotfix, 'poster stability must not rely on a DOM setter monkey patch'
 assert "setInterval(syncVideoPopup, 350)" not in hotfix, 'continuous polling performance regression returned'
 
 # If every legitimate artwork source truly fails, the fallback must be a quiet
