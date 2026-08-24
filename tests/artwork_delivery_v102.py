@@ -26,16 +26,21 @@ assert 'art._480x480' in audius, 'modern Audius 480px artwork key must remain su
 assert "art['1000x1000']" in audius and "art['150x150']" in audius, 'Audius size fallbacks were removed'
 assert 'artwork: artworkOf(track)' in audius and 'artworkCandidates: artworkCandidates(track)' in audius, 'normalized tracks must retain primary + fallback artwork URLs'
 
-# Source-specific Collections must stay on real catalog music when their
-# special endpoint is empty/unavailable. They must fall back to the live
-# multi-provider query before app-v3 is ever allowed to use its offline Demo.
-audius_collection = manager.index("collection.source === 'audius'")
-audius_live_fallback = manager.index('return this.searchTracks(collection.query, { limit, offset });', audius_collection)
-assert audius_collection >= 0 and audius_live_fallback > audius_collection, 'Audius collections must fall back to live search'
-jamendo_collection = manager.index("collection.source === 'jamendo'")
-jamendo_live_fallback = manager.index('return this.searchTracks(collection.query, { limit, offset });', jamendo_collection)
-assert jamendo_collection >= 0 and jamendo_live_fallback > jamendo_collection, 'Jamendo collections must fall back to live search'
-assert 'if (tracks.length) return dedupeTracks(tracks);' in manager, 'source-specific collection results must still be preferred when healthy'
+# Source-specific Collections must stay on real catalog music even when their
+# specialized endpoint returns only a small curated batch. Preserve those real
+# source items first, then fill the rest of the page from the collection's live
+# multi-provider query. This is what prevents Fresh Drops from stopping at 4–5
+# tracks while also preventing the offline Auralis Demo feed from replacing it.
+assert 'async fillCollectionPage' in manager, 'partial live collection filler missing'
+primary_pos = manager.index('const primary = dedupeTracks(primaryTracks || []);')
+search_pos = manager.index('const liveFallback = await this.searchTracks(collection.query, { limit, offset });')
+merge_pos = manager.index('dedupeTracks([...primary, ...liveFallback]).slice(0, limit)')
+assert 0 <= primary_pos < search_pos < merge_pos, 'source-specific items must remain first before live fallback filling'
+assert 'if (primary.length >= limit) return primary.slice(0, limit);' in manager, 'already-full provider collection pages should not make unnecessary fallback searches'
+assert manager.count('return this.fillCollectionPage(tracks, collection, { limit, offset });') >= 2, 'Audius and Jamendo collections must both use partial-page filling'
+assert 'fallbackTracks' not in manager, 'catalog manager must not insert Demo tracks into live collections'
+assert 'state.discoverHasMore = tracks.length >= 16' in app, 'Discover pagination threshold changed unexpectedly'
+assert "els.discoverMore.textContent = 'Load more tracks'" in app, 'Load more tracks control must remain available'
 
 # Keep the existing v10.1.6 visible-artwork and poster-stability safeguards.
 assert "const VERSION = '10.1.6'" in hotfix, 'v10.1.6 artwork stability layer must remain active'
