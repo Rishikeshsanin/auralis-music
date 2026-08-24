@@ -7,6 +7,7 @@ boot = (root / 'js' / 'konkani-radio-v7.js').read_text()
 app = (root / 'js' / 'app-v3.js').read_text()
 graph = (root / 'js' / 'music-graph-v9.js').read_text()
 full = (root / 'js' / 'full-playback-v9-1.js').read_text()
+lifecycle = (root / 'js' / 'preview-lifecycle-v10-2.mjs').read_text()
 
 # Partial provider collections must remain real and gain enough live results for pagination.
 assert 'async fillCollectionPage' in manager, 'partial collection filler missing'
@@ -29,10 +30,13 @@ assert 'suspendFullForPreview' in coordinator and 'full.state.player.pauseVideo?
 assert 'full.state.active = false' in coordinator, 'full-player progress/control handlers must go idle during preview'
 assert 'v102-preview-exclusive' in coordinator and 'pointer-events:none' in coordinator, 'paused full iframe must not be interactable during a preview'
 
-# Ending a normal preview must stop the preview controller before it auto-cycles.
-assert "window.addEventListener('ended', handlePreviewEnded, true)" in coordinator
-assert 'event.stopImmediatePropagation();' in coordinator and 'finishPreview({ restore: true });' in coordinator
-assert 'playlistSequence' in coordinator and 'playlistTotal' in coordinator, 'explicit preview-playlist sequencing must remain supported'
+# Preview startup and completion must be explicit lifecycle transitions, never inferred from one DOM frame.
+assert "window.addEventListener('auralis:preview-requested', handlePreviewRequested)" in coordinator
+assert "window.addEventListener('auralis:preview-started', handlePreviewStarted)" in coordinator
+assert "['failed', 'cancelled', 'ended']" in coordinator
+assert "playerBar()?.classList.contains('v9-preview-active')" not in coordinator, 'coordinator must not infer preview startup from DOM timing'
+assert 'class PreviewRequestLifecycle' in lifecycle and 'class PreviewOwnershipLifecycle' in lifecycle
+assert 'state.preview.sequence && state.preview.index < state.preview.queue.length - 1' in graph, 'preview playlists must finish after the last available preview'
 
 # Previous playback is restored as PAUSED, never auto-resumed.
 assert 'restoreFullPaused' in coordinator and "$('#playButton').textContent = '▶'" in coordinator
@@ -47,7 +51,6 @@ assert "window.addEventListener('play', handleAudioPlay, true)" in coordinator, 
 assert "full.stop?.()" in coordinator, 'direct playback must stop any prior full-player session'
 
 # Bottom player artwork must follow preview/full ownership.
-assert 'previewArtworkFromTrigger' in coordinator and "$('#playerCover')" in coordinator
 assert 'track.artwork || video.artwork' in coordinator, 'full song artwork must restore into the bottom player'
 assert 'nodes.cover.dataset.artworkKey' in graph and 'item.artwork' in graph, 'Music Graph preview must keep stable, source-correct player artwork'
 assert 'const artwork = track.artwork || video.artwork' in full, 'Full Playback must continue updating player artwork'

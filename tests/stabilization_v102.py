@@ -13,6 +13,7 @@ ux = (root / 'js' / 'ux-reliability-v9-2.js').read_text(encoding='utf-8')
 collections = (root / 'js' / 'collections.js').read_text(encoding='utf-8')
 manager = (root / 'js' / 'providers' / 'catalog-manager.js').read_text(encoding='utf-8')
 audius = (root / 'js' / 'providers' / 'audius.js').read_text(encoding='utf-8')
+lifecycle = (root / 'js' / 'preview-lifecycle-v10-2.mjs').read_text(encoding='utf-8')
 
 # Provider artwork candidates flow from normalization to every core image.
 assert 'dataset.auralisArtworkCandidates' in app
@@ -42,7 +43,11 @@ assert 'previewExpiresSoon' in graph and "fetchCatalog({ mode: 'track'" in graph
 assert 'state.preview.recoveryCount < 1' in graph
 assert "toast('Preview source unavailable'" in graph
 assert "toast('Preview source failed'" not in graph
-assert 'AuralisMusicGraphV9?.deactivatePreview?.()' in coordinator
+assert 'AuralisMusicGraphV9?.deactivatePreview?.(options)' in coordinator
+assert "previewLifecycle.request" in graph and "previewLifecycle.isCurrent(requestToken)" in graph
+assert "auralis:preview-${phase}" in graph and "handlePreviewTerminal" in coordinator
+assert "playerBar()?.classList.contains('v9-preview-active')" not in coordinator
+assert "supersede(reason = 'superseded')" in lifecycle
 
 # Mixed queues own next/previous/ended transitions across direct and YouTube sources.
 assert 'AuralisCorePlayerV102' in app and 'trackForNode' in app

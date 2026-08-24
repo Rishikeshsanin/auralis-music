@@ -1,3 +1,5 @@
+import { PreviewRequestLifecycle, previewExpiresSoon } from './preview-lifecycle-v10-2.mjs';
+
 (() => {
   const VERSION = '9.0';
   const PLAYLIST_KEY = 'auralis:playlists:v2';
@@ -26,9 +28,14 @@
       recoveryCount: 0,
       errorNotified: false,
       failed: new Set(),
-      requestToken: 0
+      requestToken: 0,
+      phase: 'idle'
     }
   };
+
+  const previewLifecycle = new PreviewRequestLifecycle((phase, detail) => {
+    window.dispatchEvent(new CustomEvent(`auralis:preview-${phase}`, { detail }));
+  });
 
   function loadCss() {
     if ($('#auralisV9Css')) return;
@@ -501,16 +508,6 @@
     $('#playerBar')?.classList.add('v9-preview-active');
   }
 
-  function previewExpiresSoon(value) {
-    try {
-      const token = new URL(value).searchParams.get('hdnea') || '';
-      const match = token.match(/(?:^|~)exp=(\d+)/);
-      return Boolean(match && Number(match[1]) <= Math.floor(Date.now() / 1000) + 60);
-    } catch {
-      return false;
-    }
-  }
-
   async function freshPreviewItem(item) {
     if (!item?.providerId || !previewExpiresSoon(item.previewUrl)) return item;
     try {
@@ -524,23 +521,32 @@
   async function startPreview(queue, index = 0, { sequence = false, continuation = false } = {}) {
     const playable = (queue || []).filter(item => item?.previewUrl);
     let item = playable[index];
+    const requestToken = previewLifecycle.request({ item, index, sequence: Boolean(sequence) });
+    state.preview.requestToken = requestToken;
+    state.preview.phase = 'requested';
     if (!item) {
       toast('No preview available', 'Try Find full source or another catalog result.');
+      previewLifecycle.terminal(requestToken, 'failed', { reason: 'no-preview' });
       return;
     }
     const nodes = playerNodes();
-    if (!nodes.audio) return;
+    if (!nodes.audio) {
+      previewLifecycle.terminal(requestToken, 'failed', { reason: 'missing-audio' });
+      return;
+    }
+    if (state.preview.active) nodes.audio.pause();
+    state.preview.active = false;
     if (!continuation) {
       state.preview.recoveryCount = 0;
       state.preview.errorNotified = false;
       state.preview.failed = new Set();
       state.preview.sequence = Boolean(sequence);
     }
-    const requestToken = ++state.preview.requestToken;
     item = await freshPreviewItem(item);
-    if (requestToken !== state.preview.requestToken) return;
+    if (!previewLifecycle.isCurrent(requestToken)) return;
     playable[index] = item;
     state.preview.active = true;
+    state.preview.phase = 'starting';
     state.preview.queue = playable;
     state.preview.index = index;
     state.preview.item = item;
@@ -548,25 +554,32 @@
     nodes.audio.src = item.previewUrl;
     nodes.audio.load();
     updatePreviewPlayer();
-    nodes.audio.play().catch(error => {
-      if (requestToken !== state.preview.requestToken || !state.preview.active) return;
+    try {
+      await nodes.audio.play();
+      if (!previewLifecycle.isCurrent(requestToken) || !state.preview.active) return;
+      state.preview.phase = 'started';
+      previewLifecycle.started(requestToken, { item, playing: true });
+    } catch (error) {
+      if (!previewLifecycle.isCurrent(requestToken) || !state.preview.active) return;
       if (error?.name === 'NotAllowedError') {
         toast('Preview needs a tap', 'Your browser blocked autoplay. Tap the player once.');
         updatePreviewPlayer();
+        state.preview.phase = 'started';
+        previewLifecycle.started(requestToken, { item, playing: false, requiresGesture: true });
       } else {
         handlePreviewFailure();
       }
-    });
+    }
   }
 
-  function deactivatePreview() {
-    if (!state.preview.active) return;
+  function deactivatePreview({ reason = 'cancelled', emitCancelled = true } = {}) {
+    previewLifecycle.cancel(reason, { emit: emitCancelled });
     state.preview.active = false;
+    state.preview.phase = 'idle';
     state.preview.queue = [];
     state.preview.index = -1;
     state.preview.item = null;
     state.preview.sequence = false;
-    state.preview.requestToken += 1;
     $('#playerBar')?.classList.remove('v9-preview-active');
     try { playerNodes().audio?.pause(); } catch {}
   }
@@ -579,13 +592,10 @@
     startPreview(state.preview.queue, state.preview.index, { sequence: state.preview.sequence, continuation });
   }
 
-  function endPreviewSession() {
-    const coordinator = window.AuralisPlaybackCoordinatorV102;
-    if (coordinator?.finishPreview) coordinator.finishPreview({ restore: true });
-    else {
-      playerNodes().audio?.pause();
-      deactivatePreview();
-    }
+  function endPreviewSession(phase = 'ended', reason = phase) {
+    const requestToken = state.preview.requestToken;
+    if (!previewLifecycle.terminal(requestToken, phase, { item: state.preview.item, reason })) return;
+    if (state.preview.active) deactivatePreview({ reason, emitCancelled: false });
   }
 
   function handlePreviewFailure() {
@@ -604,7 +614,7 @@
       nextPreview(1, true);
       return;
     }
-    endPreviewSession();
+    endPreviewSession('failed', 'source-unavailable');
   }
 
   function bindPreviewController() {
@@ -624,8 +634,11 @@
     nodes.audio.addEventListener('ended', event => {
       if (!state.preview.active) return;
       event.stopImmediatePropagation();
-      if (state.preview.sequence) nextPreview(1, true);
-      else endPreviewSession();
+      if (state.preview.sequence && state.preview.index < state.preview.queue.length - 1) {
+        startPreview(state.preview.queue, state.preview.index + 1, { sequence: true, continuation: true });
+      } else {
+        endPreviewSession('ended');
+      }
     }, true);
 
     nodes.audio.addEventListener('error', event => {

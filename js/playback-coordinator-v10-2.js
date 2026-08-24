@@ -1,3 +1,5 @@
+import { PreviewOwnershipLifecycle } from './preview-lifecycle-v10-2.mjs';
+
 (() => {
   const VERSION = '10.2.0';
   const PREVIEW_TRIGGER = [
@@ -29,10 +31,16 @@
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
 
   const state = {
-    preview: null,
     fullHooked: false,
     hookFrames: 0
   };
+
+  const ownership = new PreviewOwnershipLifecycle({
+    deactivate: options => deactivateInternalPreview(options),
+    restorePaused: session => restoreInterruptedPaused(session),
+    onChange: session => document.body?.classList.toggle('v102-preview-exclusive', Boolean(session))
+  });
+  Object.defineProperty(state, 'preview', { enumerable: true, get: () => ownership.session });
 
   function formatTime(seconds) {
     const value = Math.max(0, Math.floor(Number(seconds || 0)));
@@ -183,47 +191,24 @@
     return true;
   }
 
-  function previewArtworkFromTrigger(trigger) {
-    if (!(trigger instanceof Element)) return '';
-    const card = trigger.closest('.v9-graph-card');
-    if (card) return $('.v9-graph-art img', card)?.currentSrc || $('.v9-graph-art img', card)?.src || '';
-    const body = trigger.closest('#graphModalBodyV9');
-    return $('.v9-detail-art img', body)?.currentSrc || $('.v9-detail-art img', body)?.src || '';
+  function deactivateInternalPreview(options) {
+    window.AuralisMusicGraphV9?.deactivatePreview?.(options);
   }
 
-  function enforcePreviewArtwork(trigger) {
-    const artwork = previewArtworkFromTrigger(trigger);
-    if (!artwork || !playerBar()?.classList.contains('v9-preview-active')) return;
-    const cover = $('#playerCover');
-    if (!cover) return;
-    const current = $('img', cover)?.currentSrc || $('img', cover)?.src || '';
-    if (current === artwork) return;
-    const img = document.createElement('img');
-    img.src = artwork;
-    img.alt = `${clean($('#playerTitle')?.textContent) || 'Preview'} artwork`;
-    img.referrerPolicy = 'no-referrer';
-    cover.replaceChildren(img);
-  }
-
-  function deactivateInternalPreview() {
-    window.AuralisMusicGraphV9?.deactivatePreview?.();
-  }
-
-  function finishPreview({ restore = true } = {}) {
-    const session = state.preview;
+  function restoreInterruptedPaused(session) {
     if (!session) return;
-    const audio = audioNode();
-    try { audio?.pause(); } catch {}
-    deactivateInternalPreview();
-    document.body.classList.remove('v102-preview-exclusive');
-    state.preview = null;
-
-    if (!restore) return;
     if (session.owner === 'full') {
       const full = fullApi();
       if (restoreFullPaused(full)) return;
     }
     restoreCorePaused(session.core);
+  }
+
+  function finishPreview({ restore = true, requestId = null, reason = 'finished', emitCancelled = false } = {}) {
+    if (!ownership.session) return false;
+    const audio = audioNode();
+    try { audio?.pause(); } catch {}
+    return Boolean(ownership.finish(requestId, { restore, reason, emitCancelled }));
   }
 
   function suspendFullForPreview(full) {
@@ -235,38 +220,23 @@
     return true;
   }
 
-  function beginPreview(trigger) {
+  function beginPreview() {
     stopLegacyLookup();
-    const alreadyPreviewing = Boolean(state.preview || playerBar()?.classList.contains('v9-preview-active'));
-    if (!alreadyPreviewing) {
+    if (!ownership.session) {
       const core = snapshotCorePlayer();
       const full = fullApi();
       const suspendedFull = suspendFullForPreview(full);
       if (!suspendedFull) audioNode()?.pause();
-      state.preview = {
+      ownership.begin({
         owner: suspendedFull ? 'full' : (core?.hasTrack ? 'core' : 'none'),
-        core,
-        playlistSequence: Boolean(trigger.closest('#playPlaylistPreviewsV9')),
-        playlistTotal: trigger.closest('#playPlaylistPreviewsV9')
-          ? Math.max(1, document.querySelectorAll('#graphModalBodyV9 [data-playlist-preview]').length)
-          : 1,
-        endedCount: 0
-      };
-      document.body.classList.add('v102-preview-exclusive');
+        core
+      });
     }
-
-    requestAnimationFrame(() => {
-      if (!playerBar()?.classList.contains('v9-preview-active')) {
-        finishPreview({ restore: true });
-        return;
-      }
-      enforcePreviewArtwork(trigger);
-    });
   }
 
   function claimFullPlayback() {
     stopLegacyLookup();
-    if (state.preview) finishPreview({ restore: false });
+    if (ownership.session) ownership.supersede('full-playback');
     const audio = audioNode();
     try { audio?.pause(); } catch {}
     const full = fullApi();
@@ -275,7 +245,7 @@
 
   function claimDirectPlayback() {
     stopLegacyLookup();
-    if (state.preview) finishPreview({ restore: false });
+    if (ownership.session) ownership.supersede('direct-playback');
     const full = fullApi();
     if (full?.state?.player || full?.state?.track) {
       try { full.stop?.(); } catch {}
@@ -283,7 +253,7 @@
   }
 
   function claimLegacyLookup() {
-    if (state.preview) finishPreview({ restore: false });
+    if (ownership.session) ownership.supersede('legacy-playback');
     const full = fullApi();
     try { full?.stop?.(); } catch {}
     try { audioNode()?.pause(); } catch {}
@@ -295,7 +265,7 @@
 
     const previewTrigger = target.closest(PREVIEW_TRIGGER);
     if (previewTrigger) {
-      beginPreview(previewTrigger);
+      beginPreview();
       return;
     }
 
@@ -314,20 +284,30 @@
     }
   }
 
-  function handlePreviewEnded(event) {
-    if (!state.preview || event.target !== audioNode()) return;
-    const session = state.preview;
-    session.endedCount += 1;
-    if (session.playlistSequence && session.endedCount < session.playlistTotal) {
-      return; // Preserve the explicit "Play available previews" sequence.
-    }
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    finishPreview({ restore: true });
+  function lifecycleRequestId(event) {
+    const requestId = Number(event.detail?.requestId);
+    return Number.isInteger(requestId) ? requestId : null;
+  }
+
+  function handlePreviewRequested(event) {
+    if (!ownership.session) beginPreview();
+    const requestId = lifecycleRequestId(event);
+    if (requestId !== null) ownership.requested(requestId);
+  }
+
+  function handlePreviewStarted(event) {
+    const requestId = lifecycleRequestId(event);
+    if (requestId !== null) ownership.started(requestId);
+  }
+
+  function handlePreviewTerminal(event) {
+    const requestId = lifecycleRequestId(event);
+    if (requestId === null || !ownership.accepts(requestId)) return;
+    finishPreview({ restore: true, requestId, reason: event.type.replace('auralis:preview-', '') });
   }
 
   function handleAudioPlay(event) {
-    if (event.target !== audioNode() || state.preview) return;
+    if (event.target !== audioNode() || ownership.session) return;
     const full = fullApi();
     if (full?.state?.active || full?.state?.player) {
       try { full.stop?.(); } catch {}
@@ -372,8 +352,12 @@
     // This module loads before Full Playback v9.1 so its window-capture claim
     // listener runs first. That gives every user action exactly one audio owner.
     window.addEventListener('click', handleClick, true);
-    window.addEventListener('ended', handlePreviewEnded, true);
     window.addEventListener('play', handleAudioPlay, true);
+    window.addEventListener('auralis:preview-requested', handlePreviewRequested);
+    window.addEventListener('auralis:preview-started', handlePreviewStarted);
+    ['failed', 'cancelled', 'ended'].forEach(phase => {
+      window.addEventListener(`auralis:preview-${phase}`, handlePreviewTerminal);
+    });
     waitForFullApi();
     window.AuralisPlaybackCoordinatorV102 = {
       version: VERSION,

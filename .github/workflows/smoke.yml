@@ -34,6 +34,7 @@ jobs:
           node --check js/auralis-experience-v7.js
           node --check js/konkani-radio-v7.js
           node --check js/music-graph-v9.js
+          node --check js/preview-lifecycle-v10-2.mjs
           node --check js/playback-coordinator-v10-2.js
           node --check js/full-playback-v9-1.js
           node --check js/ux-reliability-v9-2.js
@@ -72,4 +73,5 @@ jobs:
           python tests/artwork_delivery_v102.py
           python tests/playback_collection_v102.py
           python tests/stabilization_v102.py
+          node tests/preview_race_v102.mjs
           node tests/sw_lifecycle_v10.mjs
