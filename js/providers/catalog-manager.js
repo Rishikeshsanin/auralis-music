@@ -87,14 +87,22 @@ class CatalogManager {
 
   async collection(collection, { limit = 48, offset = 0 } = {}) {
     if (!collection) return [];
+
     if (collection.source === 'audius' && typeof audiusProvider[collection.loader] === 'function') {
       const tracks = await this.settle(audiusProvider, () => audiusProvider[collection.loader](limit, offset));
-      return dedupeTracks(tracks);
+      if (tracks.length) return dedupeTracks(tracks);
+      // Endpoint-specific discovery feeds can be temporarily empty/unavailable.
+      // Keep the collection live by falling back to the same collection query
+      // across the active song providers instead of dropping into Demo tracks.
+      return this.searchTracks(collection.query, { limit, offset });
     }
+
     if (collection.source === 'jamendo') {
       const tracks = await this.settle(jamendoProvider, () => jamendoProvider.featured(collection.tag || collection.query, limit, offset));
       if (tracks.length) return dedupeTracks(tracks);
+      return this.searchTracks(collection.query, { limit, offset });
     }
+
     return this.searchTracks(collection.query, { limit, offset });
   }
 
