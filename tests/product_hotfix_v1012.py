@@ -30,13 +30,17 @@ assert "Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML')" in js, 
 assert 'markTrendingPreserveWindow' in js and "event.target?.id === 'audio'" in js, 'audio play/pause must mark the preservation window'
 assert 'syncTrendingState' in js and 'cardSignature' in js, 'guard must update active/play state without replacing card artwork nodes'
 
-# Poster recovery should prefer real Audius artwork, then canonical catalog art, before branded fallback remains.
+# Poster recovery should prefer real Audius artwork, then canonical catalog art.
 assert 'queryAudiusArtwork' in js and 'audiusCandidates' in js, 'Audius artwork retry path missing'
 assert "art['480x480']" in js and "art['1000x1000']" in js and "art['150x150']" in js, 'Audius size fallbacks missing'
 assert 'queryArtwork' in js and 'candidateScore' in js, 'canonical poster recovery missing'
 assert 'artist:\\"' in js and 'track:\\"' in js, 'exact artist/track lookup missing'
-assert 'v1012-cover' in js and 'v1012-wave' in js and '--v1012-hue' in css, 'refined unique Auralis cover missing'
-assert 'font-size:9px' in css, 'fallback monogram must stay subtle rather than giant'
+
+# If every legitimate source fails, fallback must stay neutral and must not mimic album art.
+assert 'v1012-cover' in js, 'final fallback state hook missing'
+assert '.v1011-branded-art.v1012-cover::before' in css and '.v1011-branded-art.v1012-cover::after' in css
+assert '.v1012-wave' in css and 'display:none!important' in css, 'synthetic waveform fallback must remain hidden'
+assert 'place-items:center!important' in css, 'neutral fallback initial must remain centered'
 
 # Visible artwork must load immediately while hidden/off-screen recovery remains idle/event-driven.
 assert 'artworkHostIsVisible' in js, 'visible artwork detection missing'
