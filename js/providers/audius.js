@@ -11,14 +11,17 @@ function artworkCandidates(track) {
   const art = track?.artwork;
   if (!art) return [];
   const mirrors = Array.isArray(art.mirrors) ? art.mirrors : [];
+  // Cards render around 200–300 px, so prefer Audius's direct 480 px cover first.
+  // Keep every other size/mirror as an immediate fallback instead of throwing the
+  // card into the slower canonical-artwork recovery path after one failed URL.
   const candidates = [
-    ...mirrors,
-    art['1000x1000'],
     art['480x480'],
-    art['150x150'],
-    art._1000x1000,
     art._480x480,
-    art._150x150
+    art['1000x1000'],
+    art._1000x1000,
+    art['150x150'],
+    art._150x150,
+    ...mirrors
   ].map(validArtworkUrl).filter(Boolean);
   return [...new Set(candidates)];
 }
