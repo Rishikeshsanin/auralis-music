@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '10.1.5';
+  const VERSION = '10.1.6';
   const $ = (selector, root = document) => root?.querySelector?.(selector) || null;
   const $$ = (selector, root = document) => root?.querySelectorAll ? [...root.querySelectorAll(selector)] : [];
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
@@ -335,6 +335,28 @@
     return Boolean(owner && $('.provider-badge.audius,.provider-badge', owner)?.textContent?.trim().toLowerCase() === 'audius');
   }
 
+  function artworkHostIsVisible(host) {
+    if (!(host instanceof HTMLElement) || !host.isConnected) return false;
+    const view = host.closest('.view');
+    if (view && !view.classList.contains('active-view')) return false;
+    const modal = host.closest('.v9-modal');
+    if (modal && !modal.classList.contains('open')) return false;
+    const rect = host.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.bottom >= -120 && rect.top <= window.innerHeight + 180;
+  }
+
+  function prioritizeVisibleArtwork(root = document) {
+    const images = [];
+    if (root instanceof HTMLImageElement) images.push(root);
+    if (root?.querySelectorAll) images.push(...root.querySelectorAll('.cover-wrap img,.row-cover img,.queue-item-cover img,.radio-logo img,.v9-graph-card img,.v9-album-row img,.v9-playlist-row img,.v101-liked-row img,.player img'));
+    images.forEach(img => {
+      const host = img.parentElement;
+      if (!artworkHostIsVisible(host)) return;
+      img.loading = 'eager';
+      try { img.fetchPriority = 'high'; } catch {}
+    });
+  }
+
   function seedFallback(host, identity) {
     const fallback = $('.v1011-branded-art', host);
     if (!fallback) return;
@@ -356,7 +378,11 @@
     if (!candidates.length) return;
     const img = document.createElement('img');
     img.alt = `${identity.title || 'Track'} artwork`;
-    img.loading = 'lazy';
+    const visible = artworkHostIsVisible(host);
+    img.loading = visible ? 'eager' : 'lazy';
+    if (visible) {
+      try { img.fetchPriority = 'high'; } catch {}
+    }
     img.referrerPolicy = 'no-referrer';
     let index = 0;
 
@@ -406,6 +432,16 @@
     }
   }
 
+  function scanVisibleFallbacks(root = document) {
+    const fallbacks = [];
+    if (root instanceof HTMLElement && root.matches('.v1011-branded-art')) fallbacks.push(root);
+    if (root?.querySelectorAll) fallbacks.push(...root.querySelectorAll('.v1011-branded-art'));
+    fallbacks.forEach(node => {
+      const host = node.parentElement;
+      if (artworkHostIsVisible(host)) void improveFallback(host);
+    });
+  }
+
   function scanFallbacks() {
     $$('.v1011-branded-art').forEach(node => void improveFallback(node.parentElement));
   }
@@ -429,11 +465,22 @@
     return Boolean(node.querySelector?.('.v1011-branded-art'));
   }
 
+  function prioritizeNewArtwork(node) {
+    if (!(node instanceof HTMLElement)) return false;
+    prioritizeVisibleArtwork(node);
+    if (!addedNodeNeedsArtworkScan(node)) return false;
+    scanVisibleFallbacks(node);
+    const fallbacks = node.matches('.v1011-branded-art') ? [node] : [...node.querySelectorAll('.v1011-branded-art')];
+    return fallbacks.some(fallback => !artworkHostIsVisible(fallback.parentElement));
+  }
+
   function start() {
     loadCss();
     restoreVideoShellToDock();
     installTrendingGridGuard();
     syncVideoPopup();
+    prioritizeVisibleArtwork();
+    scanVisibleFallbacks();
     scheduleScan();
 
     window.addEventListener('click', event => {
@@ -442,7 +489,11 @@
         markTrendingPreserveWindow();
       }
       if (target instanceof Element && target.closest('[data-view],[data-view-trigger]')) {
-        scheduleScan();
+        requestAnimationFrame(() => {
+          prioritizeVisibleArtwork();
+          scanVisibleFallbacks();
+          scheduleScan();
+        });
       }
       interceptVideoControls(event);
     }, true);
@@ -459,7 +510,7 @@
       records.forEach(record => record.addedNodes.forEach(node => {
         if (!(node instanceof HTMLElement)) return;
         suppressVideoToast(node);
-        if (addedNodeNeedsArtworkScan(node)) needsArtworkScan = true;
+        if (prioritizeNewArtwork(node)) needsArtworkScan = true;
       }));
       if (needsArtworkScan) scheduleScan();
     });
@@ -478,7 +529,13 @@
       });
     }
 
-    window.addEventListener('resize', () => requestAnimationFrame(syncVideoPopup));
+    window.addEventListener('resize', () => {
+      requestAnimationFrame(() => {
+        syncVideoPopup();
+        prioritizeVisibleArtwork();
+        scanVisibleFallbacks();
+      });
+    });
 
     window.AuralisProductHotfixV1012 = {
       version:VERSION,
@@ -486,6 +543,8 @@
       hideVideo,
       syncVideoPopup,
       scanFallbacks,
+      scanVisibleFallbacks,
+      prioritizeVisibleArtwork,
       installTrendingGridGuard
     };
   }
