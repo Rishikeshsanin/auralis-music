@@ -504,7 +504,7 @@
     polish();
 
     const observer = new MutationObserver(scheduleScan);
-    observer.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
+    observer.observe(document.body, { childList:true, subtree:true });
     document.addEventListener('click', captureClicks, true);
     document.addEventListener('pointerdown', event => {
       if (event.target.closest('#fullPlaybackDockV91 .v91-dock-head')) beginDrag(event);
@@ -526,7 +526,7 @@
       }
     }
 
-    setInterval(syncVideoPresentation, 500);
+    window.addEventListener('auralis:full-playback-state', scheduleScan);
     window.AuralisProductPolishV1011 = { version:VERSION, setVideoExpanded, repairArtwork:scanArtwork, artistTracks };
   }
 

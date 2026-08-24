@@ -61,6 +61,7 @@ const els = {
 };
 
 const demoAudioCache = new Map();
+const trackByNode = new WeakMap();
 
 function makeDemoAudio(key = 'auralis') {
   if (demoAudioCache.has(key)) return demoAudioCache.get(key);
@@ -133,7 +134,8 @@ const state = {
   failedTracks: new Set(),
   failureInProgress: false,
   playbackTimer: null,
-  searchToken: 0
+  searchToken: 0,
+  streamRetries: new Map()
 };
 
 function formatTime(seconds) {
@@ -169,6 +171,16 @@ function imgTag(track, className = '') {
     return `<span class="cover-fallback ${className}">${escapeHtml((track.title || 'A')[0])}</span>`;
   }
   return `<img class="${className}" src="${escapeHtml(track.artwork)}" alt="${title} artwork" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.parentElement.classList.add('image-failed')"/>`;
+}
+
+function bindArtworkCandidates(root, track) {
+  const img = root?.querySelector?.('img');
+  if (!img) return;
+  const candidates = [...new Set([
+    ...(Array.isArray(track?.artworkCandidates) ? track.artworkCandidates : []),
+    track?.artwork
+  ].filter(Boolean))];
+  if (candidates.length) img.dataset.auralisArtworkCandidates = JSON.stringify(candidates);
 }
 
 function isCurrent(track) {
@@ -240,6 +252,14 @@ function bindTrackCards(target, tracks) {
   $$('.music-card', target).forEach(card => card.addEventListener('click', () => {
     playFrom(tracks, Number(card.dataset.trackIndex));
   }));
+  $$('.music-card', target).forEach(card => {
+    const track = tracks[Number(card.dataset.trackIndex)];
+    if (!track) return;
+    trackByNode.set(card, track);
+    const button = $('[data-play-index]', card);
+    if (button) trackByNode.set(button, track);
+    bindArtworkCandidates($('.cover-wrap', card), track);
+  });
 }
 
 function renderCards() {
@@ -256,6 +276,14 @@ function renderList(target, tracks, source, emptyTitle = 'Nothing here yet', emp
   target.innerHTML = tracks.length ? tracks.map((track, index) => rowTemplate(track, index, source)).join('') : emptyState(emptyTitle, emptyDetail);
   $$('[data-play-row]', target).forEach(btn => btn.addEventListener('click', () => playFrom(tracks, Number(btn.dataset.playRow))));
   $$('[data-like-row]', target).forEach(btn => btn.addEventListener('click', () => toggleLike(tracks[Number(btn.dataset.likeRow)])));
+  $$('.track-row', target).forEach(row => {
+    const track = tracks[Number(row.dataset.trackIndex)];
+    if (!track) return;
+    trackByNode.set(row, track);
+    const button = $('[data-play-row]', row);
+    if (button) trackByNode.set(button, track);
+    bindArtworkCandidates($('.row-cover', row), track);
+  });
 }
 
 function renderLibrary() {
@@ -355,6 +383,30 @@ function renderRadio(target = els.radioGrid, tracks = state.radioResults, compac
   $$('[data-radio-index]', target).forEach(card => card.addEventListener('click', () => {
     playFrom(tracks, Number(card.dataset.radioIndex));
   }));
+  $$('[data-radio-index]', target).forEach(card => {
+    const track = tracks[Number(card.dataset.radioIndex)];
+    if (!track) return;
+    trackByNode.set(card, track);
+    const button = $('[data-radio-play]', card);
+    if (button) trackByNode.set(button, track);
+    bindArtworkCandidates($('.radio-logo', card), track);
+  });
+}
+
+function syncPlaybackIndicators() {
+  $$('.music-card,.track-row,.radio-card').forEach(owner => {
+    const track = trackByNode.get(owner);
+    if (!track) return;
+    const active = state.current?.id === track.id;
+    owner.classList.toggle('active', active);
+    const button = $('[data-play-index],[data-play-row],[data-radio-play]', owner);
+    if (!button) return;
+    if (button.matches('[data-play-row]')) {
+      button.textContent = active && !els.audio.paused ? '❚❚' : String(Number(button.dataset.playRow) + 1);
+    } else {
+      button.textContent = active && !els.audio.paused ? '❚❚' : '▶';
+    }
+  });
 }
 
 function refreshAll() {
@@ -398,6 +450,7 @@ function playFrom(tracks, index) {
 function loadTrack(track, autoplay = false) {
   clearPlaybackTimer();
   state.failureInProgress = false;
+  state.streamRetries.delete(track.id);
   state.current = track;
   els.audio.pause();
   els.audio.removeAttribute('src');
@@ -409,11 +462,7 @@ function loadTrack(track, autoplay = false) {
   store.addRecent(track);
   updatePlayer();
   renderLibrary();
-  renderCards();
-  renderDiscover();
-  renderSearch();
-  renderRadio();
-  if (state.radioResults.length) renderRadio(els.homeRadioGrid, state.radioResults.slice(0, 6), true);
+  syncPlaybackIndicators();
 
   if (autoplay) {
     armPlaybackWatchdog(track);
@@ -443,6 +492,42 @@ function loadTrack(track, autoplay = false) {
   }
 }
 
+function retryStream(track) {
+  if (track?.provider !== 'Audius' || !track.streamUrl) return false;
+  const attempt = Number(state.streamRetries.get(track.id) || 0) + 1;
+  if (attempt > 2) return false;
+  state.streamRetries.set(track.id, attempt);
+
+  const resumeAt = Number(els.audio.currentTime || 0);
+  const url = new URL(track.streamUrl, location.href);
+  url.searchParams.set('retry', String(attempt));
+  url.searchParams.set('_auralis_attempt', String(Date.now()));
+  state.failureInProgress = true;
+  clearPlaybackTimer();
+  els.audio.pause();
+  els.audio.src = url.href;
+  els.audio.load();
+  if (resumeAt > 0) {
+    els.audio.addEventListener('loadedmetadata', () => {
+      try { els.audio.currentTime = Math.min(resumeAt, Math.max(0, Number(els.audio.duration || resumeAt) - 0.05)); } catch {}
+    }, { once: true });
+  }
+  armPlaybackWatchdog(track);
+  setTimeout(() => {
+    if (state.current?.id !== track.id) return;
+    state.failureInProgress = false;
+    els.audio.play().catch(error => {
+      if (error?.name === 'NotAllowedError') {
+        clearPlaybackTimer();
+        toast('Playback needs a tap', 'Your browser blocked autoplay. Tap play once.');
+      } else {
+        handlePlaybackFailure(track, 'The replacement Audius route could not start.');
+      }
+    });
+  }, 120);
+  return true;
+}
+
 function findNextPlayableIndex() {
   if (!state.queue.length) return -1;
   for (let step = 1; step <= state.queue.length; step++) {
@@ -456,6 +541,7 @@ function handlePlaybackFailure(track, detail = 'Try another source.') {
   if (!track || state.current?.id !== track.id || state.failureInProgress) return;
   state.failureInProgress = true;
   clearPlaybackTimer();
+  if (retryStream(track)) return;
   state.failedTracks.add(track.id);
   const nextIndex = findNextPlayableIndex();
   if (nextIndex >= 0 && nextIndex !== state.queueIndex) {
@@ -539,10 +625,15 @@ function updatePlayer() {
   els.play.textContent = track && !els.audio.paused ? '❚❚' : '▶';
   els.playerLike.classList.toggle('liked', Boolean(track) && store.isLiked(track.id));
   els.playerLike.textContent = track && store.isLiked(track.id) ? '♥' : '♡';
-  if (track?.artwork) {
-    els.playerCover.innerHTML = `<img src="${escapeHtml(track.artwork)}" alt="${escapeHtml(track.title)} artwork" referrerpolicy="no-referrer"/>`;
-  } else {
-    els.playerCover.innerHTML = `<span>${track?.isLive ? '◍' : 'A'}</span>`;
+  const artworkKey = `${track?.id || ''}::${track?.artwork || ''}`;
+  if (els.playerCover.dataset.artworkKey !== artworkKey) {
+    els.playerCover.dataset.artworkKey = artworkKey;
+    if (track?.artwork) {
+      els.playerCover.innerHTML = `<img src="${escapeHtml(track.artwork)}" alt="${escapeHtml(track.title)} artwork" referrerpolicy="no-referrer"/>`;
+      bindArtworkCandidates(els.playerCover, track);
+    } else {
+      els.playerCover.innerHTML = `<span>${track?.isLive ? '◍' : 'A'}</span>`;
+    }
   }
   if (track?.isLive) {
     els.currentTime.textContent = 'LIVE';
@@ -552,6 +643,9 @@ function updatePlayer() {
   } else {
     els.progress.disabled = false;
   }
+  window.dispatchEvent(new CustomEvent('auralis:player-context', {
+    detail: { track, mode: track?.isLive ? 'radio' : 'direct', paused: els.audio.paused }
+  }));
 }
 
 function showView(view) {
@@ -559,6 +653,7 @@ function showView(view) {
   $(`#${view}View`)?.classList.add('active-view');
   $$('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === view));
   $('#contentScroll').scrollTop = 0;
+  window.dispatchEvent(new CustomEvent('auralis:view-change', { detail: { view } }));
 }
 
 function openQueue(open = true) {
@@ -905,7 +1000,7 @@ function bindPlayer() {
 
   els.audio.addEventListener('play', () => {
     updatePlayer();
-    renderCards();
+    syncPlaybackIndicators();
   });
 
   els.audio.addEventListener('playing', () => {
@@ -919,7 +1014,7 @@ function bindPlayer() {
 
   els.audio.addEventListener('pause', () => {
     updatePlayer();
-    renderCards();
+    syncPlaybackIndicators();
   });
 
   els.audio.addEventListener('timeupdate', () => {
@@ -944,7 +1039,7 @@ function bindPlayer() {
     if (state.repeat === 'one') {
       els.audio.currentTime = 0;
       els.audio.play();
-    } else {
+    } else if (window.dispatchEvent(new CustomEvent('auralis:core-ended', { cancelable: true, detail: { track: state.current } }))) {
       nextTrack(false);
     }
   });
@@ -1020,6 +1115,27 @@ renderLibrary();
 renderCards();
 renderDiscover();
 renderQueue();
+
+window.AuralisCorePlayerV102 = {
+  version: '10.2.0',
+  state,
+  trackForNode(node) {
+    if (!(node instanceof Element)) return null;
+    return trackByNode.get(node) || trackByNode.get(node.closest('.music-card,.track-row,.radio-card')) || null;
+  },
+  play(track, queue = null, index = 0) {
+    if (!track) return;
+    if (Array.isArray(queue) && queue.length) {
+      state.queue = [...queue];
+      state.queueIndex = Math.max(0, Math.min(queue.length - 1, Number(index) || 0));
+    } else {
+      state.queue = [track];
+      state.queueIndex = 0;
+    }
+    loadTrack(track, true);
+    renderQueue();
+  }
+};
 
 Promise.allSettled([
   loadTrending(),

@@ -11,9 +11,7 @@
     scanQueued: false,
     artworkCache: new Map(),
     audiusArtworkCache: new Map(),
-    artworkPending: new WeakSet(),
-    preserveTrendingUntil: 0,
-    trendingGuardInstalled: false
+    artworkPending: new WeakSet()
   };
 
   function loadCss() {
@@ -145,69 +143,6 @@
       toast.classList.add('v1012-video-toast-suppressed');
       requestAnimationFrame(() => toast.remove());
     }
-  }
-
-  function markTrendingPreserveWindow() {
-    state.preserveTrendingUntil = performance.now() + 220;
-  }
-
-  function cardSignature(card) {
-    if (!card) return '';
-    return [
-      clean($('h3', card)?.textContent),
-      clean($('p', card)?.textContent),
-      clean($('.provider-badge', card)?.textContent),
-      clean($('.card-meta', card)?.textContent)
-    ].join('::');
-  }
-
-  function syncTrendingState(existingCards, nextCards) {
-    existingCards.forEach((card, index) => {
-      const next = nextCards[index];
-      if (!next) return;
-      card.classList.toggle('active', next.classList.contains('active'));
-      const currentButton = $('[data-play-index]', card);
-      const nextButton = $('[data-play-index]', next);
-      if (currentButton && nextButton) {
-        currentButton.textContent = nextButton.textContent;
-        const label = nextButton.getAttribute('aria-label');
-        if (label) currentButton.setAttribute('aria-label', label);
-      }
-    });
-  }
-
-  function installTrendingGridGuard() {
-    if (state.trendingGuardInstalled) return;
-    const grid = $('#trendingGrid');
-    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-    if (!grid || !descriptor?.get || !descriptor?.set) return;
-
-    try {
-      Object.defineProperty(grid, 'innerHTML', {
-        configurable: true,
-        get() {
-          return descriptor.get.call(this);
-        },
-        set(value) {
-          if (performance.now() <= state.preserveTrendingUntil) {
-            const existingCards = $$('.music-card', this);
-            if (existingCards.length) {
-              const template = document.createElement('template');
-              template.innerHTML = String(value ?? '');
-              const nextCards = $$('.music-card', template.content);
-              const sameCards = nextCards.length === existingCards.length
-                && nextCards.every((card, index) => cardSignature(card) === cardSignature(existingCards[index]));
-              if (sameCards) {
-                syncTrendingState(existingCards, nextCards);
-                return;
-              }
-            }
-          }
-          descriptor.set.call(this, value);
-        }
-      });
-      state.trendingGuardInstalled = true;
-    } catch {}
   }
 
   function identityForHost(host) {
@@ -360,16 +295,7 @@
   function seedFallback(host, identity) {
     const fallback = $('.v1011-branded-art', host);
     if (!fallback) return;
-    const seed = [...`${identity.title}|${identity.artist}`].reduce((sum, char) => (sum + char.charCodeAt(0) * 17) % 360, 0);
-    host.style.setProperty('--v1012-hue', String(seed));
-    host.style.setProperty('--v1012-hue2', String((seed + 118) % 360));
     fallback.classList.add('v1012-cover');
-    if (!$('.v1012-wave', fallback)) {
-      const wave = document.createElement('span');
-      wave.className = 'v1012-wave';
-      wave.innerHTML = '<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>';
-      fallback.append(wave);
-    }
   }
 
   function installRecoveredArtwork(host, urls, identity) {
@@ -384,6 +310,7 @@
       try { img.fetchPriority = 'high'; } catch {}
     }
     img.referrerPolicy = 'no-referrer';
+    img.dataset.auralisArtworkCandidates = JSON.stringify(candidates);
     let index = 0;
 
     const tryNext = () => {
@@ -395,6 +322,9 @@
     };
 
     img.addEventListener('load', () => {
+      $$('img', host).forEach(node => {
+        if (node !== img) node.remove();
+      });
       $('.v1011-branded-art', host)?.remove();
       $$('.cover-fallback,.auralis-art-fallback-v92', host).forEach(node => node.remove());
       host.classList.remove('v1011-art-fallback-active','auralis-art-failed-v92','image-failed','no-art');
@@ -475,20 +405,16 @@
   }
 
   function start() {
-    loadCss();
-    restoreVideoShellToDock();
-    installTrendingGridGuard();
-    syncVideoPopup();
+      loadCss();
+      restoreVideoShellToDock();
+      syncVideoPopup();
     prioritizeVisibleArtwork();
     scanVisibleFallbacks();
     scheduleScan();
 
     window.addEventListener('click', event => {
       const target = event.target;
-      if (target instanceof Element && target.closest('#playButton,[data-play-index],.music-card')) {
-        markTrendingPreserveWindow();
-      }
-      if (target instanceof Element && target.closest('[data-view],[data-view-trigger]')) {
+        if (target instanceof Element && target.closest('[data-view],[data-view-trigger]')) {
         requestAnimationFrame(() => {
           prioritizeVisibleArtwork();
           scanVisibleFallbacks();
@@ -496,13 +422,6 @@
         });
       }
       interceptVideoControls(event);
-    }, true);
-
-    document.addEventListener('play', event => {
-      if (event.target?.id === 'audio') markTrendingPreserveWindow();
-    }, true);
-    document.addEventListener('pause', event => {
-      if (event.target?.id === 'audio') markTrendingPreserveWindow();
     }, true);
 
     const observer = new MutationObserver(records => {
@@ -542,11 +461,10 @@
       showVideo,
       hideVideo,
       syncVideoPopup,
-      scanFallbacks,
-      scanVisibleFallbacks,
-      prioritizeVisibleArtwork,
-      installTrendingGridGuard
-    };
+        scanFallbacks,
+        scanVisibleFallbacks,
+        prioritizeVisibleArtwork
+      };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });

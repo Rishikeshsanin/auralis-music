@@ -1,7 +1,7 @@
 export const collections = [
-  { id:'fresh-drops', title:'Fresh Drops', subtitle:'New releases worth hearing first', icon:'✦', accent:'violet', category:'discovery', source:'audius', loader:'bestNewReleases', query:'new releases' },
-  { id:'underground', title:'Under the Radar', subtitle:'Low-key tracks before they blow up', icon:'◌', accent:'cyan', category:'discovery', source:'audius', loader:'underTheRadar', query:'underground indie' },
-  { id:'most-loved', title:'Most Loved', subtitle:'Open-catalog favorites with repeat value', icon:'♥', accent:'rose', category:'discovery', source:'audius', loader:'mostLoved', query:'popular' },
+  { id:'fresh-drops', title:'Fresh Drops', subtitle:'New releases worth hearing first', icon:'✦', accent:'violet', category:'discovery', source:'audius', loader:'bestNewReleases', fallbackLoader:'latest', query:'new releases' },
+  { id:'underground', title:'Under the Radar', subtitle:'Low-key tracks before they blow up', icon:'◌', accent:'cyan', category:'discovery', source:'audius', loader:'underTheRadar', fallbackLoader:'latest', query:'underground indie' },
+  { id:'most-loved', title:'Most Loved', subtitle:'Open-catalog favorites with repeat value', icon:'♥', accent:'rose', category:'discovery', source:'audius', loader:'mostLoved', fallbackLoader:'trending', query:'popular' },
   { id:'remix-radar', title:'Remix Radar', subtitle:'Reworks, edits and alternate energy', icon:'↻', accent:'amber', category:'discovery', source:'audius', loader:'remixables', query:'remix' },
   { id:'electronic-pulse', title:'Electronic Pulse', subtitle:'Synths, bass and bright circuits', icon:'ϟ', accent:'blue', category:'genre', source:'search', query:'electronic' },
   { id:'hip-hop-heat', title:'Hip-Hop Heat', subtitle:'Bars, beats and late-night rotation', icon:'◈', accent:'orange', category:'genre', source:'search', query:'hip hop' },

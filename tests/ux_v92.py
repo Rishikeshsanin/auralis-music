@@ -27,7 +27,9 @@ assert "if (close.textContent !== '×')" in ux, 'dock text mutation must be idem
 assert "if (close.title !== 'Stop full playback')" in ux, 'dock title mutation must be idempotently guarded'
 assert "radio.getAttribute('aria-hidden') !== next" in ux, 'radio aria mutation must be guarded'
 assert 'requestAnimationFrame(runMaintenance)' in ux and 'maintenanceQueued' in ux, 'mutation maintenance must be frame-coalesced'
-assert "attributeFilter: ['class']" in ux and "'style'" not in ux.split('observer.observe(document.body', 1)[1], 'observer must not react to high-frequency style updates'
+observer_tail = ux.split('observer.observe(document.body', 1)[1]
+assert 'attributes: true' not in observer_tail and "'style'" not in observer_tail, 'observer must react only to structural content updates'
+assert "window.addEventListener('auralis:view-change', queueMaintenance)" in ux, 'view maintenance must be event-driven'
 assert "import('./ux-reliability-v9-2.js')" in konkani, 'v9.2 UX layer is not in the progressive boot chain'
 assert "const WORKER_VERSION = '18'" in sw and "auralis-runtime-v18" in sw, 'stability worker v18 must supersede legacy shell caching'
 

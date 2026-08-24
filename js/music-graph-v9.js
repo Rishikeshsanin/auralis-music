@@ -1,3 +1,5 @@
+import { PreviewRequestLifecycle, previewExpiresSoon } from './preview-lifecycle-v10-2.mjs';
+
 (() => {
   const VERSION = '9.0';
   const PLAYLIST_KEY = 'auralis:playlists:v2';
@@ -21,9 +23,19 @@
       active: false,
       queue: [],
       index: -1,
-      item: null
+      item: null,
+      sequence: false,
+      recoveryCount: 0,
+      errorNotified: false,
+      failed: new Set(),
+      requestToken: 0,
+      phase: 'idle'
     }
   };
+
+  const previewLifecycle = new PreviewRequestLifecycle((phase, detail) => {
+    window.dispatchEvent(new CustomEvent(`auralis:preview-${phase}`, { detail }));
+  });
 
   function loadCss() {
     if ($('#auralisV9Css')) return;
@@ -486,22 +498,55 @@
     nodes.current.textContent = formatTime(nodes.audio.currentTime || 0) || '0:00';
     nodes.duration.textContent = formatTime(duration) || '0:30';
     nodes.progress.value = duration ? (nodes.audio.currentTime / duration * 100) : 0;
-    nodes.cover.innerHTML = item.artwork
-      ? `<img src="${escapeHtml(item.artwork)}" alt="${escapeHtml(item.title)} artwork" referrerpolicy="no-referrer"/>`
-      : `<span>${escapeHtml((item.title || 'A')[0])}</span>`;
+    const artworkKey = `preview::${item.graphId || item.providerId || item.title}::${item.artwork || ''}`;
+    if (nodes.cover.dataset.artworkKey !== artworkKey) {
+      nodes.cover.dataset.artworkKey = artworkKey;
+      nodes.cover.innerHTML = item.artwork
+        ? `<img src="${escapeHtml(item.artwork)}" alt="${escapeHtml(item.title)} artwork" referrerpolicy="no-referrer"/>`
+        : `<span>${escapeHtml((item.title || 'A')[0])}</span>`;
+    }
     $('#playerBar')?.classList.add('v9-preview-active');
   }
 
-  function startPreview(queue, index = 0) {
+  async function freshPreviewItem(item) {
+    if (!item?.providerId || !previewExpiresSoon(item.previewUrl)) return item;
+    try {
+      const json = await fetchCatalog({ mode: 'track', id: item.providerId });
+      return json.item?.previewUrl ? { ...item, ...json.item } : item;
+    } catch {
+      return item;
+    }
+  }
+
+  async function startPreview(queue, index = 0, { sequence = false, continuation = false } = {}) {
     const playable = (queue || []).filter(item => item?.previewUrl);
-    const item = playable[index];
+    let item = playable[index];
+    const requestToken = previewLifecycle.request({ item, index, sequence: Boolean(sequence) });
+    state.preview.requestToken = requestToken;
+    state.preview.phase = 'requested';
     if (!item) {
       toast('No preview available', 'Try Find full source or another catalog result.');
+      previewLifecycle.terminal(requestToken, 'failed', { reason: 'no-preview' });
       return;
     }
     const nodes = playerNodes();
-    if (!nodes.audio) return;
+    if (!nodes.audio) {
+      previewLifecycle.terminal(requestToken, 'failed', { reason: 'missing-audio' });
+      return;
+    }
+    if (state.preview.active) nodes.audio.pause();
+    state.preview.active = false;
+    if (!continuation) {
+      state.preview.recoveryCount = 0;
+      state.preview.errorNotified = false;
+      state.preview.failed = new Set();
+      state.preview.sequence = Boolean(sequence);
+    }
+    item = await freshPreviewItem(item);
+    if (!previewLifecycle.isCurrent(requestToken)) return;
+    playable[index] = item;
     state.preview.active = true;
+    state.preview.phase = 'starting';
     state.preview.queue = playable;
     state.preview.index = index;
     state.preview.item = item;
@@ -509,27 +554,67 @@
     nodes.audio.src = item.previewUrl;
     nodes.audio.load();
     updatePreviewPlayer();
-    nodes.audio.play().catch(() => {
-      toast('Preview needs a tap', 'Your browser blocked autoplay. Tap the player once.');
-      updatePreviewPlayer();
-    });
+    try {
+      await nodes.audio.play();
+      if (!previewLifecycle.isCurrent(requestToken) || !state.preview.active) return;
+      state.preview.phase = 'started';
+      previewLifecycle.started(requestToken, { item, playing: true });
+    } catch (error) {
+      if (!previewLifecycle.isCurrent(requestToken) || !state.preview.active) return;
+      if (error?.name === 'NotAllowedError') {
+        toast('Preview needs a tap', 'Your browser blocked autoplay. Tap the player once.');
+        updatePreviewPlayer();
+        state.preview.phase = 'started';
+        previewLifecycle.started(requestToken, { item, playing: false, requiresGesture: true });
+      } else {
+        handlePreviewFailure();
+      }
+    }
   }
 
-  function deactivatePreview() {
-    if (!state.preview.active) return;
+  function deactivatePreview({ reason = 'cancelled', emitCancelled = true } = {}) {
+    previewLifecycle.cancel(reason, { emit: emitCancelled });
     state.preview.active = false;
+    state.preview.phase = 'idle';
     state.preview.queue = [];
     state.preview.index = -1;
     state.preview.item = null;
+    state.preview.sequence = false;
     $('#playerBar')?.classList.remove('v9-preview-active');
+    try { playerNodes().audio?.pause(); } catch {}
   }
 
-  function nextPreview(delta = 1) {
+  function nextPreview(delta = 1, continuation = true) {
     if (!state.preview.active || !state.preview.queue.length) return;
     const length = state.preview.queue.length;
     state.preview.index = (state.preview.index + delta + length) % length;
     state.preview.item = previewItemAt(state.preview.index);
-    startPreview(state.preview.queue, state.preview.index);
+    startPreview(state.preview.queue, state.preview.index, { sequence: state.preview.sequence, continuation });
+  }
+
+  function endPreviewSession(phase = 'ended', reason = phase) {
+    const requestToken = state.preview.requestToken;
+    if (!previewLifecycle.terminal(requestToken, phase, { item: state.preview.item, reason })) return;
+    if (state.preview.active) deactivatePreview({ reason, emitCancelled: false });
+  }
+
+  function handlePreviewFailure() {
+    if (!state.preview.active || !state.preview.item) return;
+    const key = state.preview.item.graphId || state.preview.item.previewUrl;
+    if (state.preview.failed.has(key)) return;
+    state.preview.failed.add(key);
+    if (!state.preview.errorNotified) {
+      state.preview.errorNotified = true;
+      toast('Preview source unavailable', state.preview.queue.length > 1
+        ? 'Auralis will try one fresh replacement preview.'
+        : 'The catalog preview expired or could not be loaded.');
+    }
+    if (state.preview.recoveryCount < 1 && state.preview.queue.length > 1) {
+      state.preview.recoveryCount += 1;
+      nextPreview(1, true);
+      return;
+    }
+    endPreviewSession('failed', 'source-unavailable');
   }
 
   function bindPreviewController() {
@@ -549,14 +634,17 @@
     nodes.audio.addEventListener('ended', event => {
       if (!state.preview.active) return;
       event.stopImmediatePropagation();
-      nextPreview(1);
+      if (state.preview.sequence && state.preview.index < state.preview.queue.length - 1) {
+        startPreview(state.preview.queue, state.preview.index + 1, { sequence: true, continuation: true });
+      } else {
+        endPreviewSession('ended');
+      }
     }, true);
 
     nodes.audio.addEventListener('error', event => {
       if (!state.preview.active) return;
       event.stopImmediatePropagation();
-      toast('Preview source failed', 'Auralis is moving to the next preview if one is available.');
-      if (state.preview.queue.length > 1) nextPreview(1);
+      handlePreviewFailure();
     }, true);
 
     $('#playButton')?.addEventListener('click', event => {
@@ -711,7 +799,7 @@
       <div class="v9-playlist-rows">${items.length ? items.map((item, index) => `<div class="v9-playlist-row"><span>${index + 1}</span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.artist || item.kind || '')}</small></div>${item.previewUrl ? `<button data-playlist-preview="${index}">▶</button>` : '<i>—</i>'}<button data-playlist-remove="${index}">×</button></div>`).join('') : '<div class="empty-state"><strong>Playlist is empty</strong>Add tracks from Universal Search or Global Pulse.</div>'}</div></div>`;
     $('#playPlaylistPreviewsV9')?.addEventListener('click', () => {
       const playable = items.filter(item => item.previewUrl);
-      if (playable.length) startPreview(playable, 0);
+      if (playable.length) startPreview(playable, 0, { sequence: true });
     });
     $$('[data-playlist-preview]', $('#graphModalBodyV9')).forEach(button => button.addEventListener('click', () => {
       const item = items[Number(button.dataset.playlistPreview)];
@@ -897,6 +985,7 @@
     loadChart();
     loadProviderStatus();
     setInterval(() => loadProviderStatus(), 120000);
+    window.AuralisMusicGraphV9 = { version: VERSION, state, deactivatePreview, startPreview };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });

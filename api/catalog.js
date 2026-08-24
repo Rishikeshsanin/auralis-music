@@ -263,7 +263,17 @@ async function musicBrainzSearch(q, limit) {
 
 async function chart(limit) {
   const json = await fetchJson(`${DEEZER}/chart/0/tracks?limit=${limit}`, { timeout: 4200 });
-  return (json?.data || []).map(deezerTrack);
+  const items = (json?.data || []).map(deezerTrack);
+  if (items.length) return items;
+  // Deezer occasionally returns an empty chart envelope from one edge even
+  // though search is healthy. Keep Global Pulse live without demo content.
+  return deezerSearch('popular', 'track', limit, 0);
+}
+
+async function trackDetails(id) {
+  const item = await fetchJson(`${DEEZER}/track/${encodeURIComponent(id)}`, { timeout: 4200 });
+  if (item?.error) throw new Error(item.error.message || 'Track unavailable');
+  return deezerTrack(item);
 }
 
 async function albumDetails(id) {
@@ -318,12 +328,21 @@ export default async function handler(req, res) {
   try {
     if (mode === 'chart') {
       const items = await chart(limit);
-      res.setHeader('Cache-Control', 'public, s-maxage=180, stale-while-revalidate=900');
+      // Deezer preview URLs are short-lived signed resources. Never let the CDN
+      // serve them from a long stale window.
+      res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=30');
       return res.status(200).json({
         mode,
         items,
         coverage: { catalog: 'Deezer', canonical: 'MusicBrainz ready', playback: '30-second previews where available' }
       });
+    }
+
+    if (mode === 'track') {
+      if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Valid track id required' });
+      const item = await trackDetails(id);
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.status(200).json({ mode, item });
     }
 
     if (mode === 'album') {
@@ -357,7 +376,9 @@ export default async function handler(req, res) {
       items = deezer;
     }
 
-    res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', kind === 'track'
+      ? 'public, s-maxage=30, stale-while-revalidate=30'
+      : 'public, s-maxage=120, stale-while-revalidate=600');
     return res.status(200).json({
       mode: 'search',
       kind,

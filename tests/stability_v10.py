@@ -63,7 +63,8 @@ assert "reloadLegacyClientsOnce" in sw and "auralis-sw-migrated" in sw, 'legacy 
 assert "self.clients.claim()" in sw
 
 # Observer hardening from freeze investigations.
-assert "attributeFilter: ['class']" in ux
+assert "window.addEventListener('auralis:view-change', queueMaintenance)" in ux
+assert "attributes: true" not in ux
 assert 'maintenanceQueued' in ux and 'requestAnimationFrame(runMaintenance)' in ux
 assert 'new MutationObserver' not in recovery, 'recovery observer was redundant and must stay removed'
 assert 'let enforceTimer = null' in konkani and 'function scheduleEnforce()' in konkani, 'Konkani observer callbacks must be coalesced'

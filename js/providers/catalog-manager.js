@@ -85,16 +85,39 @@ class CatalogManager {
     return interleave(groups, limit);
   }
 
+  async fillCollectionPage(primaryTracks, collection, { limit = 48, offset = 0 } = {}) {
+    const primary = dedupeTracks(primaryTracks || []);
+    if (primary.length >= limit) return primary.slice(0, limit);
+
+    // Some provider-specific discovery endpoints intentionally return only a
+    // small curated batch (Fresh Drops can be just a handful of songs). Keep
+    // those real items first, then fill the rest of the page from the same
+    // collection query across Auralis's live song providers. Demo tracks remain
+    // a true last-resort handled by the UI only when the live network is empty.
+    const needed = Math.max(1, limit - primary.length);
+    const specializedFallback = collection.source === 'audius' && collection.fallbackLoader
+      ? await this.settle(audiusProvider, () => collection.fallbackLoader === 'trending'
+        ? audiusProvider.trending(Math.max(needed, 12), 'week', offset)
+        : audiusProvider[collection.fallbackLoader](Math.max(needed, 12), offset))
+      : [];
+    const remaining = Math.max(1, limit - dedupeTracks([...primary, ...specializedFallback]).length);
+    const liveFallback = await this.searchTracks(collection.query, { limit: Math.max(remaining, 12), offset });
+    return dedupeTracks([...primary, ...specializedFallback, ...liveFallback]).slice(0, limit);
+  }
+
   async collection(collection, { limit = 48, offset = 0 } = {}) {
     if (!collection) return [];
+
     if (collection.source === 'audius' && typeof audiusProvider[collection.loader] === 'function') {
       const tracks = await this.settle(audiusProvider, () => audiusProvider[collection.loader](limit, offset));
-      return dedupeTracks(tracks);
+      return this.fillCollectionPage(tracks, collection, { limit, offset });
     }
+
     if (collection.source === 'jamendo') {
       const tracks = await this.settle(jamendoProvider, () => jamendoProvider.featured(collection.tag || collection.query, limit, offset));
-      if (tracks.length) return dedupeTracks(tracks);
+      return this.fillCollectionPage(tracks, collection, { limit, offset });
     }
+
     return this.searchTracks(collection.query, { limit, offset });
   }
 
